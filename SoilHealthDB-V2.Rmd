@@ -1362,7 +1362,7 @@ summary_40 <- summary_40 %>%
     first_40 %in% c("soil respiration", "soil CO2emission fluxes", "soil spiration","root respiration") ~ "Soil respiration",
     first_40 %in% c("basal respiration") ~ "Basal respiration",
     first_40 %in% c("Respiration from incubation", "Respiratory rate", "net CO2") ~ "Incubation/Net CO₂",
-    TRUE ~ "Other"  # 可选：防止NA未分类
+    TRUE ~ "Other"
   ))
 
 matrix_40 <- summary_40 %>%
