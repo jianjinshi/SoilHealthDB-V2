@@ -562,6 +562,17 @@ ggsave("outputs/Figure 2.pdf", plot = final_plot, width = 20, height = 15, dpi =
 
 ## Plot soil texture--Fifure 3
 ```{r}
+# Soil texture data source:
+# Hengl T, Mendes de Jesus J, Heuvelink GBM, Ruiperez Gonzalez M, Kilibarda M, Blagotić A, et al. (2017) SoilGrids250m: Global gridded soil information based on machine learning. PLoS ONE 12(2): e0169748. https://doi.org/10.1371/journal.pone.0169748
+#
+# Original files (not included due to large size):
+#  - CLYPPT_M_sl1_250m_ll.tif (~1.10 GB)
+#  - SLTPPT_M_sl1_250m_ll.tif (~1.13 GB)
+#
+# Download link: https://github.com/ISRICWorldSoil/SoilGrids250m/tree/master
+
+
+
 SH <- read.csv("data/SoilHealthDB_V2.csv", header = T,
                          fileEncoding = "GBK",
                          na.strings = c("", "NA"))
