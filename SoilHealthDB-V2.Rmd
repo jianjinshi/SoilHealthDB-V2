@@ -1,0 +1,2177 @@
+---
+title: "SoilHealthDB-V2"
+author: "JinshiJian"
+output: html_document
+date: "2025-10-24"
+---
+
+
+
+## Load packages
+```{r load R packages, message=FALSE, echo=FALSE, cache=TRUE}
+library(here)
+library(agricolae)
+library(multcompView)
+library(ncdf4)
+library("metafor")
+library("bootstrap")
+library(cowplot)
+library(ggplot2)
+library(lubridate)
+library(kableExtra)
+library("ggpubr")
+library(ggmap)
+library(maps)
+library(mapdata)
+library(tidyr)
+library(dplyr)
+library(stringr)
+library(tiff)
+library(raster)
+library(patchwork)
+library(terra)
+library(soiltexture)
+library(purrr)
+library(forcats)
+library(reshape2)
+library(car)
+library(readr)
+
+```
+
+
+
+## Preliminary setup
+```{r preliminaries, message=FALSE, include=FALSE, echo=FALSE, cache=FALSE}
+# Set chunks defaults; these options will be applied to all subsequent chunks
+knitr::opts_chunk$set(results = 'hide', message = TRUE, include = TRUE, echo = FALSE, cache = TRUE, warning = FALSE, fig.height = 4, fig.width = 8)
+
+```
+
+
+
+## Load data
+```{r}
+SoilHealthDB <- read.csv("data/SoilHealthDB_V2.csv", header = T,
+                         fileEncoding = "GBK",
+                         na = c("", "NA"))
+
+koeppen <- read.table("data/other_data/Koeppen-Geiger-ASCII.txt", header = TRUE, sep = "")
+
+ClimateDel <- read.csv("data/other_data/summarized_climate.csv")
+
+lat <- read.csv("data/other_data/lat.csv")
+lon <- read.csv("data/other_data/lon.csv")
+
+SoilHealthDB %>% mutate(Lat_round = round(Latitude*4)/4, Long_round = round(Longitude*4)/4)
+
+```
+
+
+
+## Plot samples spatial distribution--Figure 1
+```{r}
+# conservation type
+sub_AFS <- SoilHealthDB[SoilHealthDB$Conservation_Type == "AF", ]
+sub_OGF <- SoilHealthDB[SoilHealthDB$Conservation_Type == "OF", ]
+sub_NT <- SoilHealthDB[SoilHealthDB$Conservation_Type %in% c("NT", "RT"), ]
+sub_CC <-  SoilHealthDB[SoilHealthDB$Conservation_Type == "CC", ]
+sub_SR <-  SoilHealthDB[SoilHealthDB$Conservation_Type == "SR", ]
+
+excluded_types <- c("IN", "PF", "RD", "RO", "ST")
+sub_Other <- SoilHealthDB[SoilHealthDB$Conservation_Type %in% excluded_types, ]
+
+sub_TOM <- SoilHealthDB[!SoilHealthDB$Conservation_Type %in% c("AF", "OF", "NT", "RT","CC","SR", excluded_types), ]
+
+
+# aggregate for CC
+siteInfor_CC <-
+  sub_CC %>% dplyr::select(Latitude, Longitude) %>% group_by(Latitude, Longitude) %>% tally()
+siteInfor_CC <-
+  siteInfor_CC %>% filter(!is.na(Latitude)) %>% mutate(N = ifelse(n >= 75, 75, n))
+siteInfor_CC$var_size <-
+  mean(siteInfor_CC$N) * 0.15 + (siteInfor_CC$N) * 0.05
+obs_CC <- nrow(siteInfor_CC)
+
+# aggregate for NT
+siteInfor_NT <-
+  sub_NT %>% dplyr::select(Latitude, Longitude) %>% group_by(Latitude, Longitude) %>% tally()
+siteInfor_NT <-
+  siteInfor_NT %>% filter(!is.na(Latitude)) %>% mutate(N = ifelse(n >= 75, 75, n))
+siteInfor_NT$var_size <-
+  mean(siteInfor_NT$N) * 0.15 + (siteInfor_NT$N) * 0.05
+obs_NT <- nrow(siteInfor_NT)
+
+# aggregate for OGF
+siteInfor_OGF <-
+  sub_OGF %>% dplyr::select(Latitude, Longitude) %>% group_by(Latitude, Longitude) %>% tally()
+siteInfor_OGF <-
+  siteInfor_OGF %>% filter(!is.na(Latitude)) %>% mutate(N = ifelse(n >= 75, 75, n))
+siteInfor_OGF$var_size <-
+  mean(siteInfor_OGF$N) * 0.15 + (siteInfor_OGF$N) * 0.05
+obs_OF <- nrow(siteInfor_OGF)
+
+# aggregate for AFS
+siteInfor_AFS <-
+  sub_AFS %>% dplyr::select(Latitude, Longitude) %>% group_by(Latitude, Longitude) %>% tally()
+siteInfor_AFS <-
+  siteInfor_AFS %>% filter(!is.na(Latitude)) %>% mutate(N = ifelse(n >= 75, 75, n))
+siteInfor_AFS$var_size <-
+  mean(siteInfor_AFS$N) * 0.15 + (siteInfor_AFS$N) * 0.05
+obs_AF <- nrow(siteInfor_AFS)
+
+# aggregate for SR
+siteInfor_SR <-
+  sub_SR %>% dplyr::select(Latitude, Longitude) %>% group_by(Latitude, Longitude) %>% tally()
+siteInfor_SR <-
+  siteInfor_SR %>% filter(!is.na(Latitude)) %>% mutate(N = ifelse(n >= 75, 75, n))
+siteInfor_SR$var_size <-
+  mean(siteInfor_SR$N) * 0.15 + (siteInfor_SR$N) * 0.05
+obs_SR <- nrow(siteInfor_SR)
+
+# aggregate for Other
+siteInfor_Other <-
+  sub_Other %>% dplyr::select(Latitude, Longitude) %>% group_by(Latitude, Longitude) %>% tally()
+siteInfor_Other <-
+  siteInfor_Other %>% filter(!is.na(Latitude)) %>% mutate(N = ifelse(n >= 75, 75, n))
+siteInfor_Other$var_size <-
+  mean(siteInfor_Other$N) * 0.15 + (siteInfor_Other$N) * 0.05
+obs_Other <- nrow(siteInfor_Other)
+
+# aggregate for TOM
+siteInfor_TOM <-
+  sub_TOM %>% dplyr::select(Latitude, Longitude) %>% group_by(Latitude, Longitude) %>% tally()
+siteInfor_TOM <-
+  siteInfor_TOM %>% filter(!is.na(Latitude)) %>% mutate(N = ifelse(n >= 75, 75, n))
+siteInfor_TOM$var_size <-
+  mean(siteInfor_TOM$N) * 0.15 + (siteInfor_TOM$N) * 0.05
+obs_TOM <- nrow(siteInfor_TOM)
+
+
+# ------------------------------------------------------------------------------
+# global map
+counties <- map_data("world", region = ".", exact = FALSE)
+
+globMap <- ggplot(data = counties) +
+  geom_polygon(aes(x = long, y = lat , group = group),
+               color = "white",
+               fill = 'gray') +
+  guides(fill = FALSE) +
+  theme(legend.position = "none")
+
+
+# map_conservation type
+map_plot <- globMap +
+  geom_point(data = siteInfor_CC, aes(x = Longitude, y = Latitude),
+             shape = 1, col = "orange", size = siteInfor_CC$var_size, show.legend = FALSE) +
+  geom_point(data = siteInfor_NT, aes(x = Longitude, y = Latitude),
+             shape = 2, col = "red", size = siteInfor_NT$var_size, alpha = 0.7, show.legend = FALSE) +
+  geom_point(data = siteInfor_OGF, aes(x = Longitude, y = Latitude),
+             shape = 3, col = "black", size = siteInfor_OGF$var_size, alpha = 0.7, show.legend = FALSE) +
+  geom_point(data = siteInfor_AFS, aes(x = Longitude, y = Latitude),
+             shape = 4, col = "cyan", size = siteInfor_AFS$var_size, alpha = 0.7, show.legend = FALSE) +
+  geom_point(data = siteInfor_SR, aes(x = Longitude, y = Latitude),
+             shape = 0, col = "pink", size = siteInfor_SR$var_size, alpha = 0.7, show.legend = FALSE) +
+  geom_point(data = siteInfor_Other, aes(x = Longitude, y = Latitude),
+             shape = 5, col = "purple", size = siteInfor_Other$var_size, alpha = 0.7, show.legend = FALSE) +
+  geom_point(data = siteInfor_TOM, aes(x = Longitude, y = Latitude),
+             shape = 8, col = "yellow", size = siteInfor_TOM$var_size, alpha = 0.7, show.legend = FALSE) +
+  theme_bw() +
+  theme(
+    panel.grid = element_blank(),
+    panel.border = element_rect(colour = "black", fill = NA, size = 1.5),
+    axis.text = element_text(size = 12),
+    axis.title = element_text(size = 15)
+  ) +
+  scale_x_continuous(name = "Longitude", breaks = seq(-180, 180, 30)) +
+  scale_y_continuous(limits = c(-60, 90), name = "Latitude", breaks = seq(-60, 90, 20))
+
+# legend
+legend_plot <- ggplot() +
+  annotate("text", x = 0, y = 7, label = "Legend", size = 4, fontface = "bold", hjust = 0) +
+  annotate("point", x = 0, y = 6.25, shape = 1, col = "orange", size = 5) +
+  annotate("text", x = 0.55, y = 6.25, label = paste0("CC (", obs_CC, ")"), hjust = 0, size = 4) +
+  annotate("point", x = 0, y = 5.5, shape = 2, col = "red", size = 5) +
+  annotate("text", x = 0.55, y = 5.5, label = paste0("NT (", obs_NT, ")"), hjust = 0, size = 4) +
+  annotate("point", x = 0, y = 4.75, shape = 3, col = "black", size = 5) +
+  annotate("text", x = 0.55, y = 4.75, label = paste0("OF (", obs_OF, ")"), hjust = 0, size = 4) +
+  annotate("point", x = 0, y = 4, shape = 4, col = "cyan", size = 5) +
+  annotate("text", x = 0.55, y = 4, label = paste0("AF (", obs_AF, ")"), hjust = 0, size = 4) +
+  annotate("point", x = 0, y = 3.25, shape = 0, col = "pink", size = 5) +
+  annotate("text", x = 0.55, y = 3.25, label = paste0("SR (", obs_SR, ")"), hjust = 0, size = 4) +
+  annotate("point", x = 0, y = 2.5, shape = 5, col = "purple", size = 5) +
+  annotate("text", x = 0.55, y = 2.5, label = paste0("Other (", obs_Other, ")"), hjust = 0, size = 4) +
+  annotate("point", x = 0, y = 1.75, shape = 8, col = "yellow", size = 5) +
+  annotate("text", x = 0.55, y = 1.75, label = paste0("TOM (", obs_TOM, ")"), hjust = 0, size = 4) +
+  theme_void() +
+  coord_cartesian(xlim = c(-0.3, 3.5), ylim = c(0, 8))
+
+final_plot <- plot_grid(map_plot, legend_plot, ncol = 2, rel_widths = c(4, 0.6))
+print(final_plot)
+ggsave("outputs/Figure 1.jpg", plot = final_plot, width = 9, height = 4)
+ggsave("outputs/Figure 1.pdf", plot = final_plot, width = 9, height = 4, units = "in", dpi = 300)
+
+```
+
+
+
+## Plot climate--Figure 2 (1/5,climate types)
+```{r}
+# get climate information
+for (i in 1:nrow(SoilHealthDB) ) {
+  
+  # get the lat and lon from SoilHealthDB-V2
+  target_lat <- SoilHealthDB$Latitude[i]
+  target_lon <- SoilHealthDB$Longitude[i]
+  
+  if (!is.na(target_lat) & !is.na(target_lon)) {
+    # get the closest lat and lon from koeppen
+    ilat <- koeppen$Lat[which.min(abs(koeppen$Lat - target_lat))]
+    ilon <- koeppen$Lon[which.min(abs(koeppen$Lon - target_lon))]
+    
+    # get the koeppen information
+    target_koeppon <- koeppen %>% filter(Lat == ilat, Lon == ilon) %>% dplyr::select(Cls)
+    
+    SoilHealthDB[i, "Koeppen"] <- ifelse(nrow(target_koeppon) == 0, NA, target_koeppon$Cls) 
+  }
+  
+  else {next}
+  
+  print(paste0("====================", i))
+}
+
+# climate types
+SoilHealthDB %>% mutate(KoeppenGroup = case_when(Koeppen %in% c("Af", "Am", "As", "Aw") ~ "Equat"
+                                      , Koeppen %in% c("BSh", "BSk", "BWh") ~ "Arid"
+                                      , Koeppen %in% c("Cfa", "Cfb", "Csa", "Csb", "Cwa", "Cwb") ~ "Temp"
+                                      , Koeppen %in% c("Dfa", "Dfb", "Dfc", "Dwa", "Dwb") ~ "Snow"
+)) -> SoilHealthDB
+
+# percentage of each climate type
+climate_counts <- SoilHealthDB %>%
+  filter(!is.na(KoeppenGroup)) %>%
+  group_by(KoeppenGroup) %>%
+  summarise(Count = n()) %>%
+  ungroup() %>%
+  mutate(Percentage = round(Count / sum(Count) * 100, 0)) 
+
+climate_counts <- climate_counts %>%
+  arrange(desc(KoeppenGroup)) %>%
+  mutate(ypos = cumsum(Count) - 0.5 * Count)
+
+# ------------------------------------------------------------------------------
+pie_chart <- ggplot(climate_counts, aes(x = "", y = Count, fill = KoeppenGroup)) +
+  geom_bar(stat = "identity", width = 1, color = "black") +
+  coord_polar("y", start = 0) +
+  geom_text(aes(y = ypos, label = paste0(KoeppenGroup, "\n", Count, " (", Percentage, "%)")),
+            size = 8) +
+  scale_fill_manual(values = c("Equat" = "#ed8687", 
+                               "Arid" = "#ffd19d", 
+                               "Temp" = "#bdd8d7", 
+                               "Snow" = "#cabad7")) +
+  labs(fill = "Climate Group", title = "Köppen Climate Distribution") +
+  theme_void() +
+  theme(legend.position = "none", 
+        plot.title = element_text(size = 22, hjust = 0.5, vjust = -5))
+
+print(pie_chart)
+# ggsave("outputs/Figure 2(a).jpg", plot = pie_chart, width = 6, height = 6)
+# ggsave("outputs/Figure 2(a).pdf", plot = pie_chart, width = 6, height = 6, units = "in", dpi = 300)
+```
+
+
+
+# Plot climate--Figure 2 (2/5,MAT and MAP) 
+```{r}
+# get MAT and MAP
+for (i in 1:nrow(SoilHealthDB) ) {
+  
+  # get the lat and lon from sdata1
+  target_lat <- SoilHealthDB$Latitude[i]
+  target_lon <- SoilHealthDB$Longitude[i]
+  
+  if (!is.na(target_lat) & !is.na(target_lon)) {
+    # get the closest lat and lon from koeppen
+    ilat <- ClimateDel$Latitude[which.min(abs(ClimateDel$Latitude - target_lat))]
+    ilon <- ClimateDel$Longitude[which.min(abs(ClimateDel$Longitude - target_lon))]
+    
+    # get the koeppen information
+    target_Del <- ClimateDel %>% filter(Latitude == ilat, Longitude == ilon) %>% dplyr::select(MAT, MAP)
+    
+    if (nrow(target_Del) == 1) {
+      SoilHealthDB[i, "MAT_del"] <- target_Del$MAT
+      SoilHealthDB[i, "MAP_del"] <- target_Del$MAP
+    }
+    else {next}
+  }
+  
+  else {next}
+  
+  print(paste0("====================", i))
+}
+ 
+# MAT plot----------------------------------------------------------------------
+ClimateDel %>%
+  filter(MAT > -5) %>%
+  mutate(Source = "Global dataset") %>%
+  ggplot(aes(x = MAT, fill = Source)) +
+  geom_density(stat = 'density', col = "black", alpha = 0.8) +
+  geom_density(
+    data = SoilHealthDB %>% mutate(Source = "SoilHealthDB-V2"),
+    aes(x = MAT_del, fill = Source),
+    stat = 'density', col = "khaki", alpha = 0.7
+  ) +
+  scale_fill_manual(
+    values = c("Global dataset" = "gray",
+               "SoilHealthDB-V2" = "khaki")
+  ) +
+  labs(x = expression(MAT~"("~degree~C~")"), y = "Density") +
+  theme_bw() +
+  theme(
+    axis.text = element_text(size = 16),
+    axis.title = element_text(size = 18),
+    legend.position = c(0.33, 0.95),
+    legend.background = element_blank(),
+    legend.key = element_blank(),
+    legend.title = element_blank(),
+    legend.text = element_text(size = 16)
+  ) +
+  guides(
+    fill = guide_legend(
+      override.aes = list(
+        color = c("black", "khaki"),   
+        fill = c("gray", "khaki"),
+        alpha = c(1, 1)
+      )
+    )
+  ) -> plot_MAT
+# ggsave("outputs/Figure 2(b).jpg", plot = plot_MAT, width = 4, height = 6)
+# ggsave("outputs/Figure 2(b).pdf", plot = plot_MAT, width = 4, height = 6, units = "in", dpi = 300)
+
+
+# MAP plot----------------------------------------------------------------------
+sub_SoilHealthDB <- SoilHealthDB %>%
+  filter(MAP_del > 300 & MAP_del < 3000) %>%
+  mutate(Source = "SoilHealthDB-V2")
+
+ClimateDel %>%
+  filter(MAP > 300 & MAP < 3000) %>%
+  mutate(Source = "Global dataset") %>%
+  ggplot(aes(x = MAP, fill = Source)) +
+  geom_density(stat = 'density', col = "black", alpha = 0.8) +
+  geom_density(
+    data = sub_SoilHealthDB,
+    aes(x = MAP_del, fill = Source),
+    stat = 'density', col = "lightblue3", alpha = 0.7
+  ) +
+  scale_fill_manual(
+    values = c("Global dataset" = "gray",
+               "SoilHealthDB-V2" = "lightblue")
+  ) +
+  labs(x = expression(MAP~"(mm)"), y = "Density") +
+  theme_bw() +
+  theme(
+    axis.text = element_text(size = 16),
+    axis.title = element_text(size = 18),
+    legend.position = c(0.62, 0.95),
+    legend.background = element_blank(),
+    legend.key = element_blank(),
+    legend.title = element_blank(),
+    legend.text = element_text(size = 16)
+  ) +
+  guides(
+    fill = guide_legend(
+      override.aes = list(
+        color = c("black", "lightblue3"), 
+        fill  = c("gray", "lightblue"),   
+        alpha = c(1, 1)
+      )
+    )
+  ) -> plot_MAP
+
+# ggsave("outputs/Figure 2(c).jpg", plot = plot_MAP, width = 4, height = 6)
+# ggsave("outputs/Figure 2(c).pdf", plot = plot_MAP, width = 4, height = 6, units = "in", dpi = 300)
+
+```
+
+
+
+# Plot climate--Figure 2 (3/5,MAT) 
+```{r}
+# get MAT
+for (i in 1:nrow(ClimateDel) ) {
+  
+  target_lat <- ClimateDel$Latitude[i]
+  target_lon <- ClimateDel$Longitude[i]
+  
+  if (!is.na(target_lat) & !is.na(target_lon)) {
+  
+    ilat <- koeppen$Lat[which.min(abs(koeppen$Lat - target_lat))]
+    ilon <- koeppen$Lon[which.min(abs(koeppen$Lon - target_lon))]
+    
+  
+    target_koeppon <- koeppen %>% filter(Lat == ilat, Lon == ilon) %>% dplyr::select(Cls)
+    
+    ClimateDel[i, "Koeppen"] <- ifelse(nrow(target_koeppon) == 0, NA, target_koeppon$Cls) 
+  }
+  
+  else {next}
+  
+  print(paste0("====================", i))
+}
+
+# climate types
+ClimateDel %>% mutate(KoeppenGroup = case_when(Koeppen %in% c("Af", "Am", "As", "Aw") ~ "Equat"
+                                     , Koeppen %in% c("BSh", "BSk", "BWh") ~ "Arid"
+                                     , Koeppen %in% c("Cfa", "Cfb", "Csa", "Csb", "Cwa", "Cwb") ~ "Temp"
+                                     , Koeppen %in% c("Dfa", "Dfb", "Dfc", "Dwa", "Dwb") ~ "Snow"
+)) -> ClimateDel
+
+ggplot(data = ClimateDel %>% filter(!is.na(KoeppenGroup))) +    
+  geom_density(aes(MAT), stat = 'density', col = "gray", fill = "gray") +
+  labs(x = expression(MAT~"("~degree~C~")"), y = "Density") +
+  facet_wrap(~KoeppenGroup) 
+
+ggplot(data = SoilHealthDB %>% filter(!is.na(KoeppenGroup))) +
+  geom_density(aes(MAT_del), stat = 'density', col = "khaki", fill = "khaki") +
+  labs(x = expression(MAT~"("~degree~C~")"), y = "Density") +
+  facet_wrap(~KoeppenGroup) 
+
+combined_data <- bind_rows(
+  ClimateDel %>% filter(!is.na(KoeppenGroup)) %>% mutate(Source = "ClimateDel"),
+  SoilHealthDB %>% filter(!is.na(KoeppenGroup)) %>% mutate(Source = "SoilHealthDB")
+)
+
+combined_data <- combined_data %>%
+  mutate(MAT_x = ifelse(Source == "ClimateDel", MAT, MAT_del))
+
+ggplot(combined_data, aes(x = MAT_x, fill = Source, color = Source)) +
+  geom_density(alpha = 0.7) + 
+  labs(x = expression(MAT~"("~degree~C~")"), y = "Density") +
+  facet_wrap(~KoeppenGroup) + 
+  scale_fill_manual(values = c("gray", "khaki")) + 
+  scale_color_manual(values = c("black", "khaki")) +
+  theme_minimal()+
+  theme(panel.border = element_rect(color = "black", fill = NA, size = 1),
+        legend.position = "none",
+    axis.text = element_text(size = 16), 
+    axis.title = element_text(size = 18),
+    strip.text = element_text(size = 18)
+        ) ->Plot_MAT_4
+
+# ggsave("outputs/Figure 2(d).jpg",plot = Plot_MAT_4,width = 10, height = 6)
+# ggsave("outputs/Figure 2(d).pdf",plot = Plot_MAT_4,width = 10, height = 6, units = "in", dpi = 300)
+
+```
+
+
+
+# Plot climate--Figure 2 (4/5,MAP) 
+```{r}
+# get MAP
+for (i in 1:nrow(ClimateDel) ) {
+  
+  target_lat <- ClimateDel$Latitude[i]
+  target_lon <- ClimateDel$Longitude[i]
+  
+  if (!is.na(target_lat) & !is.na(target_lon)) {
+    ilat <- koeppen$Lat[which.min(abs(koeppen$Lat - target_lat))]
+    ilon <- koeppen$Lon[which.min(abs(koeppen$Lon - target_lon))]
+    
+    target_koeppon <- koeppen %>% filter(Lat == ilat, Lon == ilon) %>% dplyr::select(Cls)
+    
+    ClimateDel[i, "Koeppen"] <- ifelse(nrow(target_koeppon) == 0, NA, target_koeppon$Cls) 
+  }
+  
+  else {next}
+  
+  print(paste0("====================", i))
+}
+
+# climate types
+ClimateDel %>% mutate(KoeppenGroup = case_when(Koeppen %in% c("Af", "Am", "As", "Aw") ~ "Equat"
+                                    , Koeppen %in% c("BSh", "BSk", "BWh") ~ "Arid"
+                                    , Koeppen %in% c("Cfa", "Cfb", "Csa", "Csb", "Cwa", "Cwb") ~ "Temp"
+                                    , Koeppen %in% c("Dfa", "Dfb", "Dfc", "Dwa", "Dwb") ~ "Snow"
+)) -> ClimateDel
+
+ggplot(data = ClimateDel %>% filter(!is.na(KoeppenGroup))) +    
+  geom_density(aes(MAP), stat = 'density', col = "gray", fill = "gray") +
+  labs(x = expression(MAP~"("~degree~C~")"), y = "Density") +
+  facet_wrap(~KoeppenGroup) 
+
+ggplot(data = SoilHealthDB %>% filter(!is.na(KoeppenGroup))) +
+  geom_density(aes(MAP_del), stat = 'density', col = "lightblue", fill = "lightblue") +
+  labs(x = expression(MAP~"("~degree~C~")"), y = "Density") +
+  facet_wrap(~KoeppenGroup) 
+
+combined_data <- bind_rows(
+  ClimateDel %>% filter(!is.na(KoeppenGroup)) %>% mutate(Source = "ClimateDel"),
+  SoilHealthDB %>% filter(!is.na(KoeppenGroup)) %>% mutate(Source = "SoilHealthDB")
+)
+
+combined_data <- combined_data %>%
+  mutate(MAP_x = ifelse(Source == "ClimateDel", MAP, MAP_del))
+
+ggplot(combined_data, aes(x = MAP_x, fill = Source, color = Source)) +
+  geom_density(alpha = 0.7) + 
+  labs(x = expression(MAP~"("~mm~")"), y = "Density") +
+  facet_wrap(~KoeppenGroup) + 
+  scale_fill_manual(values = c("gray", "lightblue")) + 
+  scale_color_manual(values = c("black", "lightblue")) +
+  coord_cartesian(xlim = c(0, 3000)) + 
+  theme_minimal() +
+  theme(panel.border = element_rect(color = "black", fill = NA, size = 1),
+         legend.position = "none",
+    axis.text = element_text(size = 16),
+    axis.title = element_text(size = 18),
+    strip.text = element_text(size = 18)) -> Plot_MAP_4
+
+# ggsave("outputs/Figure 2(e).jpg", plot = Plot_MAP_4, width = 10, height = 6)
+# ggsave("outputs/Figure 2(e).pdf", plot = Plot_MAP_4, width = 10, height = 6, units = "in", dpi = 300)
+
+```
+
+
+
+# Plot climate--Figure 2 (5/5，combined) 
+```{r}
+# combine Figure 2(a)~(e)
+p1 <- wrap_elements(full = pie_chart)
+p2 <- wrap_elements(full = plot_MAT)
+p3 <- wrap_elements(full = plot_MAP)
+p4 <- wrap_elements(full = Plot_MAT_4)
+p5 <- wrap_elements(full = Plot_MAP_4)
+
+row1 <- (p1 | p2 | p3) + 
+  plot_layout(ncol = 3, widths = c(8, 6, 6), heights = c(9))
+
+row2 <- (p4 | p5) + 
+  plot_layout(ncol = 2, widths = c(10, 10), heights = c(6))
+
+final_plot <- (row1 / row2) + 
+  plot_annotation(tag_levels = 'a', tag_prefix = "(", tag_suffix = ")") & 
+  theme(plot.tag = element_text(size = 24, face = "bold")) 
+
+ggsave("outputs/Figure 2.jpg", plot = final_plot, width = 20, height = 15, dpi = 300)
+ggsave("outputs/Figure 2.pdf", plot = final_plot, width = 20, height = 15, dpi = 300, units = "in")
+
+```
+
+
+
+## Plot soil texture--Fifure 3
+```{r}
+SH <- read.csv("data/SoilHealthDB_V2.csv", header = T,
+                         fileEncoding = "GBK",
+                         na.strings = c("", "NA"))
+
+# get clay and silt data from SoilGrids
+CLAY <- terra::rast("data/other_data/CLYPPT_M_sl1_250m_ll.tif")
+SILT <- terra::rast("data/other_data/SLTPPT_M_sl1_250m_ll.tif")
+
+site_points <- vect(SH, geom = c("Longitude", "Latitude"), crs = crs(CLAY))
+
+soil_proper  <- terra::extract(c(CLAY,SILT), site_points, ID = TRUE)
+colnames(soil_proper ) <- c("ID","CLAY", "SILT")
+
+soil_proper_noID  <- soil_proper[, -1]
+
+SH <- cbind(SH, soil_proper_noID)
+SH$SAND <- 100 - SH$CLAY - SH$SILT
+write.csv(SH, "data/SoilHealthDB_V2_Soilgrids.csv", row.names = FALSE)
+
+# ------------------------------------------------------------------------------
+SHDB <- read.csv("data/SoilHealthDB_V2_Soilgrids.csv", header = TRUE,
+                 fileEncoding = "GBK",
+                 na.strings = c("", "NA")) 
+
+required_cols <- c("Texture", "SAND", "SILT", "CLAY")
+missing_cols <- setdiff(required_cols, colnames(SHDB))
+if (length(missing_cols) > 0) {
+  stop(paste("Error: missing the following columns:", paste(missing_cols, collapse = ", ")))
+}
+
+SHDB <- SHDB %>%
+  mutate(SAND = as.numeric(SAND),
+         SILT = as.numeric(SILT),
+         CLAY = as.numeric(CLAY))
+
+# divide SoilHealthDB-V2 into two parts: with and without texture information
+SHDB_with_Texture <- SHDB %>% filter(!is.na(Texture) & Texture != "")
+SHDB_without_Texture <- SHDB %>% filter(is.na(Texture) | Texture == "")
+
+# process the part without texture information
+if (nrow(SHDB_without_Texture) > 0) {
+  
+  SHDB_without_Texture <- SHDB_without_Texture[complete.cases(SHDB_without_Texture[, c("SAND", "SILT", "CLAY")]), ]
+
+# Check whether SAND + SILT + CLAY = 100
+SHDB_without_Texture$sum_check <- SHDB_without_Texture$SAND + SHDB_without_Texture$SILT + SHDB_without_Texture$CLAY
+  SHDB_without_Texture <- SHDB_without_Texture %>%
+    filter(sum_check == 100) %>%
+    dplyr::select(-sum_check)  
+
+# determine soil texture class (returns 12 binary columns, one per texture class)
+  texture_matrix <- TT.points.in.classes(
+    tri.data = SHDB_without_Texture[, c("SAND", "SILT", "CLAY")],
+    class.sys = "USDA.TT"
+  )
+
+  soil_classes <- colnames(texture_matrix)
+  SHDB_without_Texture$Soil_texture <- apply(texture_matrix, 1, function(x) soil_classes[which.max(x)])
+
+# define a mapping table between abbreviations and full texture names
+  texture_mapping <- data.frame(
+    Soil_texture = c("Cl", "SiCl", "SaCl", "ClLo", "SiClLo", "SaClLo",
+                     "Lo", "SiLo", "SaLo", "Si", "LoSa", "Sa"),
+    Texture_name = c("clay", "silty clay", "sandy clay", "clay loam", "silty clay loam", "sandy clay loam",
+                     "loam", "silty loam", "sandy loam", "silt", "loamy sand", "sand")
+  )
+# Map the calculated classes to full texture names
+SHDB_without_Texture <- SHDB_without_Texture %>%
+    dplyr::select(-Texture)
+
+SHDB_without_Texture <- SHDB_without_Texture %>%
+    left_join(texture_mapping, by = "Soil_texture") %>%
+    rename(Texture = Texture_name) %>%
+    dplyr::select(-Soil_texture)
+}
+
+# merge both subsets and retain only valid texture entries 
+SHDB <- bind_rows(SHDB_with_Texture, SHDB_without_Texture) %>%
+  filter(!is.na(Texture) & Texture != "")
+
+SHDB <- SHDB %>%
+  mutate(Texture = tolower(Texture))
+
+write.csv(SHDB, "data/SoilHealthDB-V2_Processed.csv", row.names = FALSE)
+
+# ------------------------------------------------------------------------------
+
+levels_order <- c("sand", "loamy sand", "sandy loam", 
+                  "sandy clay loam", "loam", "silt loam", "silt", 
+                  "clay", "sandy clay", "clay loam", "silty clay", "silty clay loam")
+
+color_mapping <- c("sand" = "yellow", "loamy sand" = "yellow", "sandy loam" = "yellow",
+                   "sandy clay loam" = "lightgreen", "loam" = "lightgreen", "silt loam" = "lightgreen", "silt" = "lightgreen",
+                   "clay" = "skyblue", "sandy clay" = "skyblue", "clay loam" = "skyblue", "silty clay" = "skyblue", "silty clay loam" = "skyblue")
+
+# Plot the main figure: 12 soil texture classes
+result1 <- SHDB %>%
+  filter(!is.na(Texture)) %>%
+  mutate(Texture = factor(Texture, levels = levels_order)) %>%
+  group_by(Texture) %>%
+  summarise(num_study = n_distinct(StudyID)) %>%
+  ungroup()
+
+p1 <- ggplot(result1, aes(x = Texture, y = num_study, fill = Texture)) +
+  geom_col(color = "black") +  
+  scale_x_discrete(limits = levels_order) +
+  scale_fill_manual(values = color_mapping) +
+  labs(y = "Number of studies (n)",x="Soil texture") +
+  theme_minimal() +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1, size = 14),  
+        axis.title = element_text(size = 16),
+        panel.grid = element_blank(),                    
+        panel.border = element_rect(color = "black", fill = NA),
+        legend.position = "none")                        
+
+# Plot the inset figure: 3 major soil texture groups
+result2 <- SoilHealthDB %>%
+  mutate(Category = case_when(
+    tolower(Texture) %in% c("sand", "loamy sand", "sandy loam") ~ "coarse",
+    tolower(Texture) %in% c("sandy clay loam", "loam", "silt loam", "silt") ~ "medium",
+    tolower(Texture) %in% c("clay", "sandy clay", "clay loam", "silty clay", "silty clay loam") ~ "fine",
+    TRUE ~ NA_character_
+  )) %>%
+  filter(!is.na(Category)) %>%
+  mutate(Category = factor(Category, levels = c("coarse", "medium", "fine"))) %>%  # 设置因子顺序
+  group_by(Category) %>%
+  summarise(num_study = n_distinct(StudyID)) %>%
+  ungroup()
+
+p2 <- ggplot(result2, aes(x = Category, y = num_study, fill = Category)) +
+  geom_col(color = "black") +
+  scale_fill_manual(values = c("coarse" = "yellow", "medium" = "lightgreen", "fine" = "skyblue")) +
+  labs(x = NULL, y = "Number of studies (n)") + 
+  theme_minimal() +
+  theme(
+    axis.text.x = element_text(size = 12),
+    axis.title.x = element_blank(), 
+    axis.title.y = element_text(size = 14),
+    panel.grid = element_blank(),
+    panel.border = element_rect(color = "black", fill = NA),
+    legend.position = "none"
+  )
+
+
+
+# combine 2 figures
+combined_plot <- ggdraw() +
+  draw_plot(p1) +
+  draw_plot(p2, x = 0.67, y = 0.57, width = 0.3, height = 0.4)
+
+
+print(combined_plot)
+
+ggsave("outputs/Figure 3.jpg", width = 8, height = 6, dpi = 300)
+ggsave("outputs/Figure 3.pdf", width = 8, height = 6, units = "in", dpi = 300)
+
+```
+
+
+
+# Plot soil health indicators--Figure 4
+```{r data preparation for backgroud infor plot}
+SoilHealthDB <- read.csv("data/SoilHealthDB_V2.csv", header = T,
+                         fileEncoding = "GBK",
+                         na = c("", "NA"))
+sapply(SoilHealthDB,class)
+attach(SoilHealthDB)
+head(SoilHealthDB)
+
+which(colnames(SoilHealthDB) == 'Comments1') 
+SoilHealthDB %>% 
+  dplyr::select(-Comments1, -Comments2, -Comments3) -> SoilHealthDB
+
+respcol <- c("StudyID", 
+             colnames(SoilHealthDB[, seq(which(colnames(SoilHealthDB) == "BiomassCash_C"),
+                                         which(colnames(SoilHealthDB) == "Texture_C"),
+                                         6)]))
+str(respcol)
+
+SoilHealthDB <- SoilHealthDB[, respcol]
+
+# factor column need change "" to NA
+for( i in 1:length(SoilHealthDB)) {
+  for (j in 1:length(SoilHealthDB$StudyID)) {
+    if (!is.na(SoilHealthDB[j,i]) & SoilHealthDB[j,i]=="") {
+      SoilHealthDB[j,i] <- NA
+      print(paste0(i, "**********", j))
+    }
+  }
+}
+
+SoilHealthDB$StudyID %>% unique() -> StudyNumber
+
+# do all studies
+mat_sub <- matrix(NA, nrow=length(StudyNumber), ncol=length(SoilHealthDB))
+colnames(mat_sub) <- colnames(SoilHealthDB)
+row.names(mat_sub) <- StudyNumber
+
+for (i in 1:length(StudyNumber)){
+  testdata <- SoilHealthDB[SoilHealthDB$StudyID==StudyNumber[i], ]
+  for (j in 1:length(SoilHealthDB)) {
+    indc_count <- ifelse(sum(!is.na(testdata[j])) == 0, NA, sum(!is.na(testdata[j])) )
+    mat_sub[i,j] = indc_count
+    print(paste0(i, "**********", j))
+  }
+}
+
+study_ids <- as.numeric(as.character(rownames(mat_sub)))
+# divide data into SoilHealthDB and SoilHealthDB-V2
+study_group <- ifelse(study_ids <= 321, "SoilHealthDB", "SoilHealthDB-V2")
+
+group_counts <- sapply(1:ncol(mat_sub), function(j) {
+  v1 <- sum(!is.na(mat_sub[study_group == "SoilHealthDB", j]))
+  v2 <- sum(!is.na(mat_sub[study_group == "SoilHealthDB-V2", j]))
+  c("SoilHealthDB" = v1, "SoilHealthDB-V2" = v2)
+})
+group_counts <- t(group_counts)
+group_counts_df <- as.data.frame(group_counts)
+
+colnames(group_counts_df) <- c("SoilHealthDB", "SoilHealthDB-V2")
+group_counts_df$Variable <- gsub("_C", "", colnames(mat_sub))
+
+df_ind <- group_counts_df
+ind_names <- gsub("_C", "", colnames(mat_sub))
+
+df_ind_long <- pivot_longer(df_ind, cols = c("SoilHealthDB", "SoilHealthDB-V2"),
+                            names_to = "study_group", values_to = "count")
+
+df_ind_long <- df_ind_long[!df_ind_long$Variable %in% c("StudyID", "WUA", "MBP"), ]
+df_ind_long$Variable  <- factor(df_ind_long$Variable,
+                                levels = ind_names[!ind_names %in% c("StudyID", "WUA", "MBP")])
+
+df_ind_long$Variable  <- factor(df_ind_long$Variable,  levels = ind_names)
+df_ind_long$study_group  <- factor(df_ind_long$study_group,  levels = c("SoilHealthDB-V2", "SoilHealthDB"))
+
+
+fill_colors <- c("SoilHealthDB" = "steelblue", "SoilHealthDB-V2" = "orange")
+
+num_study <- length(unique(SoilHealthDB$StudyID))
+y_breaks <- seq(0, num_study, by = 50)
+scaleFUN <- function(x) sprintf("%d", x)
+
+p_ind <- ggplot(df_ind_long, aes(x = Variable, y = count, fill = study_group)) +
+  geom_bar(stat = "identity", width = 0.75) +
+  labs(x = NULL, y = "Number of studies ( n )") +
+  theme_bw(base_size = 20) +
+  theme(axis.text.x = element_text(angle = 90, hjust = 1, vjust = 0.25,size=12),
+        legend.position = c(0.8, 0.8)) +
+  scale_fill_manual(values = fill_colors, name = NULL) +
+  scale_y_continuous(breaks = y_breaks, labels = scaleFUN,
+                     sec.axis = sec_axis(~ . * 100 / num_study,
+                         name = "Percentage of studies ( % )",
+                         breaks =seq(0, max((y_breaks * 100 / num_study)), by = 20), labels = scaleFUN))
+print(p_ind)
+
+ggsave("outputs/Figure 4.jpg", p_ind, width = 12, height = 6, dpi = 300)
+ggsave("outputs/Figure 4.pdf", p_ind, width = 12, height = 6, units = "in", dpi = 300)
+
+```
+
+
+
+# sub-indicator-10N--Figure 5  (from 10N to 45NutrientElement)
+```{r}
+SoilHealthDB <- read.csv("data/SoilHealthDB_V2.csv", header = T,
+                         fileEncoding = "GBK",
+                         na = c("", "NA"))
+
+# get Indicator_Comments information
+SoilHealthDB_10 <- SoilHealthDB %>%
+  filter(!is.na(X10N_Comments) & X10N_Comments != "") %>%
+  mutate(first_10 = str_extract(X10N_Comments, "^[^,\\s\\-]+"))
+
+# count the number of studies
+summary_10 <- SoilHealthDB_10 %>%
+  group_by(first_10) %>%
+  summarise(study_count = n_distinct(StudyID)) %>%
+  arrange(desc(study_count))
+
+print(summary_10)
+
+# classify indicators into several sub-indicators
+summary_10 <- summary_10 %>%
+  mutate(category = case_when(
+    first_10 %in% c("TN", "Kjel") ~ "TN",
+    first_10 %in% c("NO3", "NH4", "TIN", "Inorganic", "IN", "Nitrate", "mineral") ~ "IN",
+    first_10 %in% c("ON", "Dissolved") ~ "ON",
+    first_10 %in% c("Available", "Alkali", "AN", "available") ~ "AN",
+    TRUE ~ "Other"
+  ))
+
+# count percentage
+matrix_10 <- summary_10 %>%
+  group_by(category) %>%
+  summarise(study_count = sum(study_count)) %>%
+  mutate(percent = round(100 * study_count / sum(study_count), 1)) %>%
+  arrange(desc(percent))
+
+print(matrix_10)
+```
+
+# sub-indicator-11P
+```{r}
+SoilHealthDB <- read.csv("data/SoilHealthDB_V2.csv", header = T,
+                         fileEncoding = "GBK",
+                         na = c("", "NA"))
+
+SoilHealthDB_11 <- SoilHealthDB %>%
+  filter(!is.na(X11P_Comments) & X11P_Comments != "") %>%
+  mutate(first_11= str_extract(X11P_Comments, "^[^,\\s\\-]+"))
+
+summary_11 <- SoilHealthDB_11 %>%
+  group_by(first_11) %>%
+  summarise(study_count = n_distinct(StudyID)) %>%
+  arrange(desc(study_count))
+
+print(summary_11)
+
+summary_11 <- summary_11 %>%
+  mutate(category = case_when(
+    first_11 %in% c("P", "TP") ~ "TP",
+    first_11 %in% c("AP", "Olsen", "Extractable", "Bray", "Colwell", "Labile", "Soluble") ~ "AP",
+    first_11 %in% c("Macroorganic", "Inorganic") ~ "Other"
+  ))
+
+matrix_11 <- summary_11 %>%
+  group_by(category) %>%
+  summarise(study_count = sum(study_count)) %>%
+  mutate(percent = round(100 * study_count / sum(study_count), 1)) %>%
+  arrange(desc(percent))
+
+print(matrix_11)
+```
+
+# sub-indicator-12K
+```{r}
+SoilHealthDB <- read.csv("data/SoilHealthDB_V2.csv", header = T,
+                         fileEncoding = "GBK",
+                         na = c("", "NA"))
+
+SoilHealthDB_12 <- SoilHealthDB %>%
+  filter(!is.na(X12K_Comments) & X12K_Comments != "") %>%
+  mutate(first_12 = str_extract(X12K_Comments, "^[^,\\s\\-]+"))
+
+summary_12 <- SoilHealthDB_12 %>%
+  group_by(first_12) %>%
+  summarise(study_count = n_distinct(StudyID)) %>%
+  arrange(desc(study_count))
+
+print(summary_12)
+
+summary_12 <- summary_12 %>%
+  mutate(category = case_when(
+    first_12 %in% c("K", "TK") ~ "TK",
+    first_12 %in% c("AK", "Extractable", "Colwell", "ExtractableK") ~ "AK",
+    first_12 %in% c("Exchangeable") ~ "Other"
+  ))
+
+matrix_12 <- summary_12 %>%
+  group_by(category) %>%
+  summarise(study_count = sum(study_count)) %>%
+  mutate(percent = round(100 * study_count / sum(study_count), 1)) %>%
+  arrange(desc(percent))
+
+print(matrix_12)
+```
+
+# sub-indicator-17aggregate
+```{r}
+SoilHealthDB <- read.csv("data/SoilHealthDB_V2.csv", header = T,
+                         fileEncoding = "GBK",
+                         na = c("", "NA"))
+
+SoilHealthDB_17 <- SoilHealthDB %>%
+  filter(!is.na(X17Aggregate_comments) & X17Aggregate_comments != "") %>%
+  mutate(first_17 = str_extract(X17Aggregate_comments, "^[^,]+"))
+
+summary_17 <- SoilHealthDB_17 %>%
+  group_by(first_17) %>%
+  summarise(study_count = n_distinct(StudyID)) %>%
+  arrange(desc(study_count))
+
+
+print(summary_17)
+
+summary_17 <- summary_17 %>%
+  mutate(category = case_when(
+    first_17 %in% c("MWD", "Diameter moyen pondere(DMP)") ~ "MWD",
+    first_17 %in% c("WSA", "Aggregate stability", "DSA", "Mechanical-stable aggregate", "Wind erodible fraction < 0.84 mm aggregates") ~ "WSA"
+  ))
+
+matrix_17 <- summary_17 %>%
+  group_by(category) %>%
+  summarise(study_count = sum(study_count)) %>%
+  mutate(percent = round(100 * study_count / sum(study_count), 1)) %>%
+  arrange(desc(percent))
+
+print(matrix_17)
+```
+
+# sub-indicator-18porosity
+```{r}
+SoilHealthDB <- read.csv("data/SoilHealthDB_V2.csv", header = T,
+                         fileEncoding = "GBK",
+                         na = c("", "NA"))
+
+SoilHealthDB_18 <- SoilHealthDB %>%
+  filter(!is.na(X18Porosity_Comments) & X18Porosity_Comments != "") %>%
+  mutate(first_18 = str_extract(X18Porosity_Comments, "^[^,]+"))
+
+summary_18 <- SoilHealthDB_18 %>%
+  group_by(first_18) %>%
+  summarise(study_count = n_distinct(StudyID)) %>%
+  arrange(desc(study_count))
+
+print(summary_18)
+
+summary_18 <- summary_18 %>%
+  mutate(category = case_when(
+    first_18 %in% c("Air permeability", "Air capacity") ~ "Other",
+    first_18 %in% c("Total porosity", "Porosity", "Capillary porosity", "Macro porse", 
+                  "Noncapillary porosity", "Soil aeration porosity", "Soil capillary porosity") ~ "Porosity"
+  ))
+
+matrix_18 <- summary_18 %>%
+  group_by(category) %>%
+  summarise(study_count = sum(study_count)) %>%
+  mutate(percent = round(100 * study_count / sum(study_count), 1)) %>%
+  arrange(desc(percent))
+
+print(matrix_18)
+```
+
+# sub-indicator-24leaching
+```{r}
+SoilHealthDB <- read.csv("data/SoilHealthDB_V2.csv", header = T,
+                         fileEncoding = "GBK",
+                         na = c("", "NA"))
+
+SoilHealthDB_24 <- SoilHealthDB %>%
+  filter(!is.na(X24Leaching_Comments) & X24Leaching_Comments != "") %>%
+  mutate(first_24 = str_extract(X24Leaching_Comments, "^[^,]+"))
+
+summary_24 <- SoilHealthDB_24 %>%
+  group_by(first_24) %>%
+  summarise(study_count = n_distinct(StudyID)) %>%
+  arrange(desc(study_count))
+
+print(summary_24)
+
+summary_24 <- summary_24 %>%
+  mutate(category = case_when(
+    first_24 %in% c("SOC", "DOC") ~ "C",
+    first_24 %in% c("NO3-N", "NH4-N", "TN", "NO3-NH4",  "", "") ~ "N",
+    first_24 %in% c("Drainage", "PO4",  "Water") ~ "Other"
+  ))
+
+matrix_24 <- summary_24 %>%
+  group_by(category) %>%
+  summarise(study_count = sum(study_count)) %>%
+  mutate(percent = round(100 * study_count / sum(study_count), 1)) %>%
+  arrange(desc(percent))
+
+print(matrix_24)
+```
+
+# sub-indicator-26SWC
+```{r}
+SoilHealthDB <- read.csv("data/SoilHealthDB_V2.csv", header = T,
+                         fileEncoding = "GBK",
+                         na = c("", "NA"))
+
+SoilHealthDB_26 <- SoilHealthDB %>%
+  filter(!is.na(X26SWC_Comments) & X26SWC_Comments != "") %>%
+  mutate(first_26 = str_extract(X26SWC_Comments, "^[^,]+"))
+
+summary_26 <- SoilHealthDB_26 %>%
+  group_by(first_26) %>%
+  summarise(study_count = n_distinct(StudyID)) %>%
+  arrange(desc(study_count))
+
+print(summary_26)
+
+summary_26 <- summary_26 %>%
+  mutate(category = case_when(
+    first_26 %in% c("VWC", "VWM", "FC", "VWV", "WFPS") ~ "VWC",
+    first_26 %in% c("GWC", "GWC%") ~ "GWC",
+    first_26 %in% c("SWC", "Soil water content","Field capacity") ~ "SWC"
+  ))
+
+matrix_26 <- summary_26 %>%
+  group_by(category) %>%
+  summarise(study_count = sum(study_count)) %>%
+  mutate(percent = round(100 * study_count / sum(study_count), 1)) %>%
+  arrange(desc(percent))
+
+print(matrix_26)
+```
+
+# sub-indicator-27AHWC
+```{r}
+SoilHealthDB <- read.csv("data/SoilHealthDB_V2.csv", header = T,
+                         fileEncoding = "GBK",
+                         na = c("", "NA"))
+
+SoilHealthDB_27 <- SoilHealthDB %>%
+  filter(!is.na(X27AWHC_Comments) & X27AWHC_Comments != "") %>%
+  mutate(first_27 = str_extract(X27AWHC_Comments, "^[^,]+"))
+
+summary_27 <- SoilHealthDB_27 %>%
+  group_by(first_27) %>%
+  summarise(study_count = n_distinct(StudyID)) %>%
+  arrange(desc(study_count))
+
+print(summary_27)
+
+summary_27 <- summary_27 %>%
+  mutate(category = case_when(
+    first_27 %in% c("Available water", "AWHC", "PAWC", "Avaliable water") ~ "AWHC",
+    first_27 %in% c("Soil water storage", "Water storage", "SWS") ~ "SWS"
+  ))
+
+matrix_27 <- summary_27 %>%
+  group_by(category) %>%
+  summarise(study_count = sum(study_count)) %>%
+  mutate(percent = round(100 * study_count / sum(study_count), 1)) %>%
+  arrange(desc(percent))
+
+print(matrix_27)
+```
+
+# sub-indicator-30Weed
+```{r}
+SoilHealthDB <- read.csv("data/SoilHealthDB_V2.csv", header = T,
+                         fileEncoding = "GBK",
+                         na = c("", "NA"))
+
+SoilHealthDB_30 <- SoilHealthDB %>%
+  filter(!is.na(X30Weed_Comments) & X30Weed_Comments != "") %>%
+  mutate(first_30 = str_extract(X30Weed_Comments, "^[^,]+"))
+
+summary_30 <- SoilHealthDB_30 %>%
+  group_by(first_30) %>%
+  summarise(study_count = n_distinct(StudyID)) %>%
+  arrange(desc(study_count))
+
+print(summary_30)
+
+summary_30 <- summary_30 %>%
+  mutate(category = case_when(
+    first_30 %in% c("Weed dry biomass", "Weed biomass") ~ "Weed biomass",
+    first_30 %in% c("Weed density", "Weed coverage", "Weed incidence score") ~ "Other"
+  ))
+
+matrix_30 <- summary_30 %>%
+  group_by(category) %>%
+  summarise(study_count = sum(study_count)) %>%
+  mutate(percent = round(100 * study_count / sum(study_count), 1)) %>%
+  arrange(desc(percent))
+
+print(matrix_30)
+```
+
+# sub-indicator-33SoilFauna
+```{r}
+SoilHealthDB <- read.csv("data/SoilHealthDB_V2.csv", header = T,
+                         fileEncoding = "GBK",
+                         na = c("", "NA"))
+
+SoilHealthDB_33 <- SoilHealthDB %>%
+  filter(!is.na(X33SoilFauna_Comments) & X33SoilFauna_Comments != "") %>%
+  mutate(first_33 = str_extract(X33SoilFauna_Comments, "^[^,]+"))
+
+summary_33 <- SoilHealthDB_33 %>%
+  group_by(first_33) %>%
+  summarise(study_count = n_distinct(StudyID)) %>%
+  arrange(desc(study_count))
+
+print(summary_33)
+
+summary_33 <- summary_33 %>%
+  mutate(category = case_when(
+    first_33 %in% c("earthworm", "Termites", "pestsEnemies", "spider", "total_fauna") ~ "Macrofauna",
+    first_33 %in% c("Astigmata", "Carabidae", "Collembola", "Mesostigmata", "Oribatida", "Other-arthropods", "Prostigmata", "arthropods") ~ "Meso/Microarthropods",
+    first_33 %in% c("Abundance of enchytraeids", "Root lesion nematodes", "enchytraeids", "nematode", "nematodes", "richness") ~ "Nematodes & Microfauna"
+  ))
+
+matrix_33 <- summary_33 %>%
+  group_by(category) %>%
+  summarise(study_count = sum(study_count)) %>%
+  mutate(percent = round(100 * study_count / sum(study_count), 1)) %>%
+  arrange(desc(percent))
+
+print(matrix_33)
+```
+
+# sub-indicator-34Fungal
+```{r}
+SoilHealthDB <- read.csv("data/SoilHealthDB_V2.csv", header = T,
+                         fileEncoding = "GBK",
+                         na = c("", "NA"))
+
+SoilHealthDB_34 <- SoilHealthDB %>%
+  filter(!is.na(X34Fungal_Comments) & X34Fungal_Comments != "") %>%
+  mutate(first_34 = str_extract(X34Fungal_Comments, "^[^,]+"))
+
+summary_34 <- SoilHealthDB_34 %>%
+  group_by(first_34) %>%
+  summarise(study_count = n_distinct(StudyID)) %>%
+  arrange(desc(study_count))
+
+print(summary_34)
+
+summary_34 <- summary_34 %>%
+  mutate(category = case_when(
+    first_34 %in% c("Fungi", "AMF", "Mycorrhizae", "Fungi-Saprophtic") ~ "Fungi",
+    first_34 %in% c("Bacterial") ~ "Bacterial",
+    first_34 %in% c("Fungi_bacterial_ratio") ~ "Other"
+  ))
+
+matrix_34 <- summary_34 %>%
+  group_by(category) %>%
+  summarise(study_count = sum(study_count)) %>%
+  mutate(percent = round(100 * study_count / sum(study_count), 1)) %>%
+  arrange(desc(percent))
+
+print(matrix_34)
+```
+
+# sub-indicator-35MicrobialOther
+```{r}
+SoilHealthDB <- read.csv("data/SoilHealthDB_V2.csv", header = T,
+                         fileEncoding = "GBK",
+                         na = c("", "NA"))
+
+SoilHealthDB_35 <- SoilHealthDB %>%
+  filter(!is.na(X35MicrobialOther_Comments) & X35MicrobialOther_Comments != "") %>%
+  mutate(first_35 = str_extract(X35MicrobialOther_Comments, "^[^,]+"))
+
+summary_35 <- SoilHealthDB_35 %>%
+  group_by(first_35) %>%
+  summarise(study_count = n_distinct(StudyID)) %>%
+  arrange(desc(study_count))
+
+print(summary_35)
+
+summary_35 <- summary_35 %>%
+  mutate(category = case_when(
+    first_35 %in% c("PLFA", "FAME", "FAMEs", "Bacteria", "Total-bacteria", "Actinomycetes", "Copiotroph-bacteria", "Denitrifying-bacterial", "Nitrifying-bacterial", "Methanotrophic-bacterial-pmoA",  "Penicillium-spp", "spores") ~ "Microbial community structure",
+    first_35 %in% c("qCO2", "Microbial-activity", "MicrobialActivity", "protein") ~ "Microbial functional activity"
+  ))
+
+matrix_35 <- summary_35 %>%
+  group_by(category) %>%
+  summarise(study_count = sum(study_count)) %>%
+  mutate(percent = round(100 * study_count / sum(study_count), 1)) %>%
+  arrange(desc(percent))
+
+print(matrix_35)
+```
+
+# sub-indicator-36Enzyme
+```{r}
+SoilHealthDB <- read.csv("data/SoilHealthDB_V2.csv", header = T,
+                         fileEncoding = "GBK",
+                         na = c("", "NA"))
+
+SoilHealthDB_36 <- SoilHealthDB %>%
+  filter(!is.na(X36Enzyme_Comments) & X36Enzyme_Comments != "") %>%
+  mutate(first_36 = str_extract(X36Enzyme_Comments, "^[^,]+"))
+
+summary_36 <- SoilHealthDB_36 %>%
+  group_by(first_36) %>%
+  summarise(study_count = n_distinct(StudyID)) %>%
+  arrange(desc(study_count))
+
+print(summary_36)
+
+summary_36 <- summary_36 %>%
+  mutate(category = case_when(
+    first_36 %in% c("b-glucosidase", "Cellulase", "Dehydrogenase", "Invertase",
+                   "Phenol-oxidase", "Sucrase", "o-diphenol-oxidase", 
+                   "α-Galactosidase", "α-Glucosidase", "β-Galactosidase", 
+                   "β-Glucosidase", "β-glucosidase", "β-Glucosaminidase") ~ "C-cycling enzymes",
+    
+    first_36 %in% c("Urease", "urease", "Amidase", "Deaminase", "Protease-potential",
+                   "Tyrosn", "denitrifying-enzyme-activity", "nitrate reductase") ~ "N-cycling enzymes",
+    
+    first_36 %in% c("Phosphatase", "Acid-phosphatase", "alkaline phosphatase", 
+                   "phosphatase-alkaline", "Arylsulfatase", "Sulphatase", 
+                   "arylsulfatase-activity") ~ "P & S cycling enzymes",
+    
+    first_36 %in% c("ShannonIndex", "Shannon-weiner-H", "Actinomycetes", 
+                   "Anaerobic-bacteria", "Catalase", "catalase", 
+                   "indoleacetic-acid", "b-Glucosidase", "b-glucoside-activity") ~ "Microbial ecology & diversity"
+  ))
+
+matrix_36 <- summary_36 %>%
+  group_by(category) %>%
+  summarise(study_count = sum(study_count)) %>%
+  mutate(percent = round(100 * study_count / sum(study_count), 1)) %>%
+  arrange(desc(percent))
+
+print(matrix_36)
+```
+
+# sub-indicator-37Cmineralization
+```{r}
+SoilHealthDB <- read.csv("data/SoilHealthDB_V2.csv", header = T,
+                         fileEncoding = "GBK",
+                         na = c("", "NA"))
+
+SoilHealthDB_37 <- SoilHealthDB %>%
+  filter(!is.na(X37Cmineralization_Comments) & X37Cmineralization_Comments != "") %>%
+  mutate(first_37 = str_extract(X37Cmineralization_Comments, "^[^,]+"))
+
+summary_37 <- SoilHealthDB_37 %>%
+  group_by(first_37) %>%
+  summarise(study_count = n_distinct(StudyID)) %>%
+  arrange(desc(study_count))
+
+print(summary_37)
+
+summary_37 <- summary_37 %>%
+  mutate(category = case_when(
+    first_37 %in% c("Cmin", "PminC", "incubation-respiration", "Incubation-respiration","Readily-mineralizable-carbon") ~ "C mineralization",
+    first_37 %in% c("qCO2") ~ "Respiration efficiency"
+  ))
+
+matrix_37 <- summary_37 %>%
+  group_by(category) %>%
+  summarise(study_count = sum(study_count)) %>%
+  mutate(percent = round(100 * study_count / sum(study_count), 1)) %>%
+  arrange(desc(percent))
+
+print(matrix_37)
+```
+
+# sub-indicator-38Nmineralization
+```{r}
+SoilHealthDB <- read.csv("data/SoilHealthDB_V2.csv", header = T,
+                         fileEncoding = "GBK",
+                         na = c("", "NA"))
+
+SoilHealthDB_38 <- SoilHealthDB %>%
+  filter(!is.na(X38Nmineralization_Comments) & X38Nmineralization_Comments != "") %>%
+  mutate(first_38 = str_extract(X38Nmineralization_Comments, "^[^,]+"))
+
+summary_38 <- SoilHealthDB_38 %>%
+  group_by(first_38) %>%
+  summarise(study_count = n_distinct(StudyID)) %>%
+  arrange(desc(study_count))
+
+print(summary_38)
+
+summary_38 <- summary_38 %>%
+  mutate(category = case_when(
+    # PMN - Potentially Mineralizable Nitrogen
+    first_38 %in% c("mineral-nitrogen","potential-mineralization-nitrogen","Mineralizable N", "mineralizable-nitrogen", "net-mineralizable-nitrogen", "potentially-mineralizable-nitrogen", "Mineral N", "PminN", "Soil N mineralization", "Soil mineral N content", "Soil-mineral-N", "mineralization-nitrogen", "net-mineralization-nitrogen","potential- minerelizable-nNitrogen", "potential-minerelizable-nitrogen", "potentially mineralizable N") ~ "PMN",
+
+    first_38 %in% c("N2O", "N2O-N") ~ "N2O-N",
+
+    first_38 %in% c("NH4-N", "net-mineralizable-NH4-N", "potentially-mineralizable-NH4-N") ~ "NH4-N",
+
+    first_38 %in% c("mineralized-NO3-N", "potentially-mineralizable-NO3-N", "readily-mineralizable-NO3-N", "total-mineralized-NO3-N") ~ "NO3-N",
+    
+    first_38 %in% c("palnt-available-N", "plant-available-nitrogen") ~ "Plant available N"
+  ))
+
+matrix_38 <- summary_38 %>%
+  group_by(category) %>%
+  summarise(study_count = sum(study_count)) %>%
+  mutate(percent = round(100 * study_count / sum(study_count), 1)) %>%
+  arrange(desc(percent))
+
+print(matrix_38)
+```
+
+# sub-indicator-40CO2
+```{r}
+SoilHealthDB <- read.csv("data/SoilHealthDB_V2.csv", header = T,
+                         fileEncoding = "GBK",
+                         na = c("", "NA"))
+
+SoilHealthDB_40 <- SoilHealthDB %>%
+  filter(!is.na(X40CO2_Comments) & X40CO2_Comments != "") %>%
+  mutate(first_40 = str_extract(X40CO2_Comments, "^[^,]+"))
+
+summary_40 <- SoilHealthDB_40 %>%
+  group_by(first_40) %>%
+  summarise(study_count = n_distinct(StudyID)) %>%
+  arrange(desc(study_count))
+
+print(summary_40)
+
+summary_40 <- summary_40 %>%
+  mutate(category = case_when(
+    first_40 %in% c("soil respiration", "soil CO2emission fluxes", "soil spiration","root respiration") ~ "Soil respiration",
+    first_40 %in% c("basal respiration") ~ "Basal respiration",
+    first_40 %in% c("Respiration from incubation", "Respiratory rate", "net CO2") ~ "Incubation/Net CO₂",
+    TRUE ~ "Other"  # 可选：防止NA未分类
+  ))
+
+matrix_40 <- summary_40 %>%
+  group_by(category) %>%
+  summarise(study_count = sum(study_count)) %>%
+  mutate(percent = round(100 * study_count / sum(study_count), 1)) %>%
+  arrange(desc(percent))
+
+print(matrix_40)
+```
+
+# sub-indicator-45NutrientElement
+```{r}
+SoilHealthDB <- read.csv("data/SoilHealthDB_V2.csv", header = T,
+                         fileEncoding = "GBK",
+                         na = c("", "NA"))
+
+SoilHealthDB_45 <- SoilHealthDB %>%
+  filter(!is.na(X45NutrientElement_Comments) & X45NutrientElement_Comments != "") %>%
+  mutate(first_45 = str_extract(X45NutrientElement_Comments, "^[^,]+"))
+
+summary_45 <- SoilHealthDB_45 %>%
+  group_by(first_45) %>%
+  summarise(study_count = n_distinct(StudyID)) %>%
+  arrange(desc(study_count))
+
+print(summary_45)
+
+summary_45 <- summary_45 %>%
+  mutate(category = case_when(
+    first_45%in% c("Ca", "Total-Ca", "Exchangeable-Ca", "Available-Ca",
+                    "Mg", "Total-Mg", "Exchangeable-Mg",
+                    "K", "Exchangeable-K",
+                    "Na", "Total-Na", "Exchangeable-Na",
+                    "S", "TotalS", "Available-S",
+                    "P", "Total-P",
+                    "Exchangeable-K_Ca_Mg") ~ "Macro-element",
+    first_45 %in% c("Zn", "Available Zn",
+                    "Mn", "Total-Mn",
+                    "Fe",
+                    "Cu",
+                    "B") ~ "Micro-element",
+    first_45 %in% c("Cd", "Pb", "Al") ~ "Heavy metal",
+
+    TRUE ~ "Other"
+  ))
+
+matrix_45 <- summary_45 %>%
+  group_by(category) %>%
+  summarise(study_count = sum(study_count)) %>%
+  mutate(percent = round(100 * study_count / sum(study_count), 1)) %>%
+  arrange(desc(percent))
+
+print(matrix_45)
+```
+
+# sub-indicators--Figure 5
+```{r}
+matrix_ids <- c(10, 11, 12, 17, 18, 24, 26, 27, 30, 33, 34, 35, 36, 37, 38, 40, 45)
+matrix_labels <- c("N", "P", "K", "Aggregate", "Porosity", "Leaching",
+                   "SWC", "AWHC", "Weed", "SoilFauna", "Fungal", "MicrobialOther",
+                   "Enzyme", "Cmineralization", "Nmineralization", "CO2", "NutrientElement")
+
+matrix_lookup <- setNames(matrix_labels, paste0("matrix_", matrix_ids))
+
+combined_data <- map_dfr(matrix_ids, function(id) {
+  df <- get(paste0("matrix_", id))
+  df$matrix_id <- paste0("matrix_", id)
+  df
+})
+
+combined_data <- combined_data %>%
+  group_by(matrix_id) %>%
+  arrange(desc(percent), .by_group = TRUE) %>%
+  mutate(label = paste0(category, " (", percent, "%)"),
+         category = fct_inorder(category)) %>%
+  ungroup()
+
+combined_data$matrix_label <- factor(matrix_lookup[combined_data$matrix_id],
+                                     levels = matrix_labels)
+
+custom_colors <- c("#8CD0C3", "#FAF5B5", "#BCB9DB", "#80B1D2", "#F9B063", "#F7CBDF")
+
+combined_data <- combined_data %>%
+  group_by(matrix_label) %>%
+  arrange(desc(percent), .by_group = TRUE) %>%
+  mutate(color_rank = row_number()) %>%
+  ungroup()
+
+ggplot(combined_data, aes(x = matrix_label, y = percent, fill = factor(color_rank))) +
+  geom_bar(stat = "identity", width = 0.6) +
+  geom_text(aes(label = label), 
+            position = position_stack(vjust = 0.5), 
+            color = "black", size = 3) +
+  coord_flip() +
+  scale_fill_manual(values = custom_colors, guide = "none") +
+  scale_y_continuous(
+    trans = "reverse",
+    labels = c("100", "75", "50", "25", "0"),
+    expand = expansion(mult = c(0, 0))) +
+  labs(x = NULL, y = "Percent (%)") +
+  theme_minimal() +
+  theme(
+    axis.text.x = element_text(size = 14),
+    axis.text.y = element_text(size = 14),
+    axis.ticks.y = element_blank(),
+    panel.grid.major.y = element_blank()
+  )
+
+ggsave("outputs/Figure 5.jpg", width = 10, height = 10, units = "in", dpi = 300)
+ggsave("outputs/Figure 5.pdf", width = 10, height = 10, units = "in", dpi = 300)
+
+```
+
+
+
+# Plot correlation--Figure 6
+```{r}
+SoilHealthDB <- read.csv("data/SoilHealthDB_V2.csv", header = T,
+                         fileEncoding = "GBK",
+                         na = c("", "NA"))
+
+soil_data <- SoilHealthDB %>%
+  mutate(across(where(is.numeric), ~ ifelse(. == 0, 0.001, .)))
+
+col_names <- colnames(soil_data)
+
+target_ranges <- list(
+  which(col_names == "BiomassCash_C"):which(col_names == "OC_C"),
+  which(col_names == "N_C"):which(col_names == "EC_C"),
+  which(col_names == "Aggregate_C"):which(col_names == "Infiltration_C"),
+  which(col_names == "Erosion_C"):which(col_names == "AWHC_C"),
+  which(col_names == "SoilFauna_C"):which(col_names == "Nmineralization_C"),
+  which(col_names == "MBC_C"):which(col_names == "MBN_C")
+)
+
+co2_index <- which(col_names == "CO2_C")
+fastc_index <- which(col_names == "FastC_C")
+
+if (length(co2_index) > 0) {
+  target_ranges <- append(target_ranges, list(co2_index))  
+}
+if (length(fastc_index) > 0) {
+  target_ranges <- append(target_ranges, list(fastc_index))
+}
+
+logRR_results <- soil_data %>% dplyr::select(StudyID, ExperimentID)
+
+for (range in target_ranges) {
+  for (i in seq(range[1], range[length(range)], by = 6)) { 
+    if ((i + 1) <= length(col_names)) { 
+      C_col <- col_names[i] 
+      T_col <- col_names[i + 1] 
+
+      indicator <- gsub("_C$", "", C_col)
+
+      logRR_results[[paste0("logRR_", indicator)]] <- log(soil_data[[T_col]]) - log(soil_data[[C_col]])
+    }
+  }
+}
+
+names <- colnames(logRR_results %>% dplyr::select(starts_with("logRR_")))
+cor_matrix <- matrix(NA, nrow = length(names), ncol = length(names))
+p_matrix <- matrix(NA, nrow = length(names), ncol = length(names))
+colnames(cor_matrix) <- rownames(cor_matrix) <- names
+colnames(p_matrix) <- rownames(p_matrix) <- names
+
+
+for (i in seq_along(names)) {
+  for (j in seq_along(names)) {
+    if (i != j) {
+      valid_data <- complete.cases(logRR_results[[names[i]]], logRR_results[[names[j]]])  
+      if (sum(valid_data) > 2) {  
+        test_result <- cor.test(logRR_results[[names[i]]][valid_data], 
+                                logRR_results[[names[j]]][valid_data], 
+                                method = "pearson")
+        cor_matrix[i, j] <- test_result$estimate
+        p_matrix[i, j] <- test_result$p.value
+      }
+    } else {
+      cor_matrix[i, j] <- 1  
+      p_matrix[i, j] <- NA
+    }
+  }
+}
+
+cor_melt <- melt(cor_matrix, na.rm = FALSE)
+p_melt <- melt(p_matrix, na.rm = FALSE)
+cor_melt$p_value <- as.numeric(as.character(p_melt$value))
+
+cor_melt$significance <- cut(cor_melt$p_value, 
+                             breaks = c(-Inf, 0.001, 0.01, 0.05, Inf), 
+                             labels = c("***", "**", "*", ""),
+                             right = FALSE)
+
+cor_melt$Var1 <- gsub("logRR_", "", cor_melt$Var1)
+cor_melt$Var2 <- gsub("logRR_", "", cor_melt$Var2)
+
+var_levels <- unique(c(cor_melt$Var1, cor_melt$Var2))
+cor_melt$Var1 <- factor(cor_melt$Var1, levels = var_levels)
+cor_melt$Var2 <- factor(cor_melt$Var2, levels = var_levels)
+
+cor_melt_upper <- cor_melt %>% filter(match(Var1, var_levels) < match(Var2, var_levels))  
+cor_melt_lower <- cor_melt %>% filter(match(Var1, var_levels) > match(Var2, var_levels))  
+
+ggplot(cor_melt, aes(x = Var1, y = Var2, fill = value)) + 
+  geom_tile(color = "gray") + 
+  geom_text(data = cor_melt_upper, aes(label = round(value, 2)), 
+            color = "black", size = 2.8) +  
+  geom_text(data = cor_melt_lower, aes(label = significance), 
+            color = "black", size = 4) +  
+  scale_fill_gradient2(low = "#3D82BF", high = "#D54846", mid = "white", midpoint = 0, na.value = "gray") +  
+  theme(axis.text.x = element_text(angle = 45, hjust = 1),  
+        axis.text.y = element_text(size = 10)) +  
+  coord_fixed(ratio = 1) +
+  labs(x = NULL, y = NULL)
+
+ggsave("outputs/Figure 6.jpg", width = 10, height = 10, dpi = 300, units = "in")
+ggsave("outputs/Figure 6.pdf", width = 10, height = 10, dpi = 300, units = "in")
+
+
+
+```
+
+
+
+# Normal distribution--Figure 7(1/4)
+```{r}
+SoilHealthDB <- read.csv("data/SoilHealthDB_V2.csv", header = T,
+                         fileEncoding = "GBK",
+                         na = c("", "NA"))
+
+# YearAfterConservation=Sampling_year - Start_year
+SoilHealthDB_CC <- SoilHealthDB %>% 
+  filter(str_detect(Conservation_Type, "CC")) %>%  
+  mutate(
+    YearAfterConservation = Sampling_year - Start_year, 
+    Term = case_when(
+      YearAfterConservation >= 1 & YearAfterConservation <= 4 ~ "Short term",
+      YearAfterConservation >= 5 & YearAfterConservation <= 9 ~ "Medium term",
+      YearAfterConservation >= 10 ~ "Long term",
+      TRUE ~ NA_character_  
+    )
+  ) %>%
+  filter(!is.na(Term))  
+
+
+par( mar=c(2, 0.2, 0.2, 0.2)
+     , mai=c(0.6, 0.7, 0.0, 0.1)  
+     , omi = c(0.0, 0.1, 0.4, 0.1)  
+     , mgp = c(0.5, 0.5, 0) 
+     , tcl = 0.4
+     , cex.axis = 1.0
+     , mfrow=c(3,2) )  
+
+respcol <- respcol[-1]
+
+for (term in c("Short term", "Medium term", "Long term")) {
+  subdata_term <- SoilHealthDB_CC %>% filter(Term == term)
+  for (i in c(1:5,7:(length(respcol)-2))) {
+    subdata <- subdata_term[, c(which(colnames(subdata_term) == 'StudyID' | colnames(subdata_term) == 'ExperimentID' | colnames(subdata_term) == 'Tillage_T')
+                                , which(colnames(subdata_term) == respcol[i]), which(colnames(subdata_term) == respcol[i]) + 1
+                                )]
+    
+    subdata <- subdata[!is.na(subdata[,4]), ]
+    subdata$yi <- log(subdata[,5]) - log(subdata[,4])
+    
+    if(any(is.infinite(subdata$yi))) {
+      subdata[is.infinite(subdata$yi),]$yi <- ifelse (subdata[is.infinite(subdata$yi),]$yi > 0,
+                                                      max(subdata[is.finite(subdata$yi),]$yi),
+                                                      min(subdata[is.finite(subdata$yi),]$yi))
+    }
+    
+    if(nrow(subdata) < 3) {
+      next
+    }
+    subdata <- subdata[!is.na(subdata$yi),]
+    
+    list_histo <- hist(subdata$yi, col='gray', breaks=50,
+                       las = 1,
+                       cex = 1,
+                       main = "",
+                       xlab = "",
+                       ylab = "" )
+    box()
+    mtext(side = 1, text = expression("Response Ratio"), line = 1.75, cex=1, outer = F)
+    mtext(side = 2, text = expression("Frequency (n)"), line = 2.0, cex=1.0, outer = F)
+    
+# Shapiro-Wilk test
+    shapiro <- shapiro.test(subdata$yi)
+    shapiro_p <- shapiro$p.value
+    
+# QQ plot
+    qqPlot(subdata$yi,
+           las = 1,
+           cex = 1,
+           pch = 1,
+           main = "",
+           xlab = "",
+           ylab = "",
+           col.lines = 'red')
+    
+    mtext(side = 1, text = expression("Normal theoretical quantiles"), line = 1.75, cex=1, outer = F)
+    mtext(side = 2, text = expression("Data quantiles"), line = 2.0, cex=1.0, outer = F)
+    
+# Other information
+    response <- colnames(subdata)[4]
+    response <- substr(response, 1, (nchar(response)-2))
+    n_obs <- length(subdata[,1])
+    n_study <- length(unique(subdata$StudyID))
+    
+    mtext(side = 3, text = paste(response, " (", n_obs, "/", n_study, "/p=", round(shapiro_p, 3), ")", sep=""), line = 0.5, cex=1, outer = T)
+    
+    print(paste("**********", term, i, response, "**********"))
+  }
+}
+
+```
+
+
+
+# bootstrap and return results--Figure 7(2/4)
+```{r}
+boots_indicator <- function(sdata, column_name, n_rep = 5000) {
+# Check if the column_name exists in data
+  if (!(column_name %in% names(sdata))) {
+    stop("Invalid column name.")
+  }
+  
+# Select relevant columns
+  subdata <- sdata[, c("StudyID", "ExperimentID", "Sampling_year", "Term", column_name,
+                       colnames(sdata)[which(colnames(sdata) == column_name) + 1])]
+  
+# Compute log response ratio
+  subdata$yi <- log(subdata[,6]) - log(subdata[,5])
+  subdata <- subdata %>% filter(!is.na(yi))
+  
+  if(nrow(subdata) < 3) { stop("Not enough data") }
+
+# Handle infinite values
+  if(any(is.infinite(subdata$yi))) {
+    subdata[is.infinite(subdata$yi),]$yi <- ifelse(subdata[is.infinite(subdata$yi),]$yi > 0,
+                                                   max(subdata[is.finite(subdata$yi),]$yi),
+                                                   min(subdata[is.finite(subdata$yi),]$yi))
+  }
+  
+# Store results in a list
+  results_list <- list()
+  
+  for (term in unique(subdata$Term)) {
+    subdata_term <- subdata %>% filter(Term == term)
+    
+    if (nrow(subdata_term) < 3) { 
+      next 
+    }
+    
+# Bootstrap sampling
+    mysamples <- replicate(n_rep, sample(subdata_term$yi, replace = TRUE))
+    mymeans <- apply(mysamples, 2, mean, na.rm = TRUE)
+    
+# Compute confidence intervals
+    BootsTest <- quantile(mymeans, c(0.025, 0.50, 0.975))
+    
+# Store outputs
+    Boots_outputs <- tibble(
+      Term = term,
+      Indicator = column_name, 
+      Low = (exp(BootsTest[[1]]) - 1) * 100, 
+      Mean = (exp(BootsTest[[2]]) - 1) * 100, 
+      High = (exp(BootsTest[[3]]) - 1) * 100,
+      obs = nrow(subdata_term),
+      n_study = length(unique(subdata_term$StudyID))
+    )
+    
+    results_list[[term]] <- Boots_outputs
+  }
+  
+# Combine results
+  final_results <- bind_rows(results_list)
+  return(final_results)
+}
+
+```
+
+
+
+## boots for each indicator--Figure 7(3/4)
+```{r}
+n_rep = 5000
+
+# Initialize results table
+boots_outputs <- tibble(
+  Term = NA,
+  Indicator = NA,
+  Low = NA,
+  Mean = NA,
+  High = NA,
+  obs = NA,
+  n_study = NA,
+  y_variable = NA,
+  y = NA
+)
+
+# Run for each response variable
+for(i in seq_along(respcol)) {
+  result <- tryCatch({
+    # Compute Bootstrap results for each indicator
+    boots_outputs2 <- boots_indicator(SoilHealthDB_CC, respcol[i], n_rep)
+    boots_outputs <- bind_rows(boots_outputs, boots_outputs2)
+  }, error = function(e) {
+    message(paste("Error for", respcol[i], ":", e$message))
+    NULL  # Return NULL if an error occurs
+  })
+  
+  if (!is.null(result)) {
+    print(paste("Processed successfully for", respcol[i]))
+  }
+}
+
+boots_outputs <- boots_outputs %>% 
+  filter(obs > 2 & Indicator != 'OC_C_Seq' & !is.na(Indicator)) %>%  
+  mutate(y_variable = str_sub(Indicator, 1, -3)) %>%
+  mutate(y = row_number())
+
+print(boots_outputs)
+
+```
+
+
+
+# Plot bootstrap results--Figure 7(4/4)
+```{r}
+boots_outputs$y_variable <- factor(boots_outputs$y_variable, levels = rev(unique(boots_outputs$y_variable)))
+
+# Ensure Term variable is a factor and ordered from Short term -> Medium term -> Long term
+boots_outputs$Term <- factor(boots_outputs$Term, levels = c("Short term", "Medium term", "Long term"))
+boots_outputs <- boots_outputs %>%
+  mutate(
+    label_text = ifelse(Mean < -100 | Mean > 100 | Low < -100 | High > 100, 
+                        paste0("(", round(Low, 2), ", ", round(Mean, 2), ", ", round(High, 2), ")"), 
+                        NA_character_)
+  )
+
+ggplot(boots_outputs, aes(x = Mean, y = y_variable, color = Term)) +
+  geom_point(pch = 1, size = 2.5) +
+  geom_errorbarh(aes(xmin = Low, xmax = High), height = 0.3, size = 0.6, 
+                 data = boots_outputs %>% filter(Mean >= -100 & Mean <= 100 & Low >= -100 & High <= 100)) + 
+  geom_vline(xintercept = 0, linetype = "dashed", color = "red", size = 0.6) +
+  facet_wrap(~Term, scales = "fixed", dir = "h") +  
+  labs(
+    x = expression(Response~to~cover~crop~'(%'~changes~")"),
+    y = "Soil health indicators"
+  ) +
+  scale_x_continuous(breaks = seq(-100, 120, 20), labels = seq(-100, 120, 20)) + 
+  xlim(-100, 125) +
+  scale_color_manual(values = c("Short term" = "orange", "Medium term" = "#0173B2", "Long term" = "black")) +  # Set colors
+  geom_text(aes(x = 95, label = paste0(obs, "/", n_study)), size = 3.5, hjust = 0) +
+  geom_text(aes(x = -25, label = label_text), size = 3.5, hjust = 0.5, vjust = 0, na.rm = TRUE) +  # 
+  
+  theme_bw() +
+  theme(
+    legend.position = "none",
+    strip.text = element_text(size = 12, face = "bold"),
+    axis.text.y = element_text(size = 10),
+    axis.title = element_text(size = 16)
+  )
+
+ggsave("outputs/Figure 7.jpg", width = 12, height = 10, dpi = 300, units = "in")
+ggsave("outputs/Figure 7.pdf", width = 12, height = 10, dpi = 300, units = "in")
+
+```
+
+
+
+# start year of medium and long term--Figure S2
+```{r}
+library(tidyverse)
+library(gghalves)
+
+duration <- read_csv("data/other_data/medium and long-term start year.csv")
+
+duration_long <- duration %>%
+  pivot_longer(
+    cols = c(Medium_start_year, Long_start_year),
+    names_to = "Category",
+    values_to = "StartYear",
+    values_drop_na = TRUE
+  ) %>%
+  mutate(
+    Category = case_when(
+      Category == "Medium_start_year" ~ "Medium term",
+      Category == "Long_start_year"   ~ "Long term",
+      TRUE ~ as.character(Category)
+    )
+  )
+
+#Bootstrap sampling
+boots_startyear <- function(sdata, n_rep = 5000) {
+  results_list <- list()
+  for (cat in unique(sdata$Category)) {
+    subdata <- sdata %>% filter(Category == cat)
+    values <- subdata$StartYear
+    if (length(values) < 3) next
+    
+    mysamples <- replicate(n_rep, sample(values, replace = TRUE))
+    mymeans <- apply(mysamples, 2, mean, na.rm = TRUE)
+    
+    results_list[[cat]] <- tibble(
+      Category = cat,
+      BootMean = mymeans
+    )
+  }
+  bind_rows(results_list)
+}
+
+boot_results <- boots_startyear(duration_long, n_rep = 5000)
+
+boot_results$Category <- factor(boot_results$Category,
+                                levels = c("Medium term", "Long term"))
+
+p <- ggplot(boot_results, aes(x = Category, y = BootMean, fill = Category)) +
+  
+  geom_boxplot(
+    width = 0.25,
+    alpha = 0.8,
+    outlier.shape = NA,
+    position = position_nudge(x = -0.15),
+    color = "black"
+  ) +
+  
+  geom_half_violin(
+    position = position_nudge(x = +0.15),
+    side = "r",
+    width = 0.9,
+    alpha = 0.6,
+    trim = FALSE,
+    color = "black"
+  ) +
+  
+  scale_y_continuous(
+    limits = c(3, 13),
+    breaks = seq(3, 13, 1)
+  ) +
+  
+  scale_fill_manual(values = c("Medium term" = "#0173B2", "Long term" = "black")) +
+  labs(
+    x = NULL,
+    y = "Start years (n)"
+  ) +
+  theme_minimal(base_size = 13) +
+  theme(
+    legend.position = "none",
+    panel.border = element_rect(colour = "black", fill = NA, linewidth = 1),
+    axis.ticks = element_line(color = "black"),
+    axis.ticks.length = unit(0.2, "cm"),
+    panel.grid = element_blank(),
+    axis.text.x = element_text(size = 12)
+  )
+
+print(p)
+
+
+ggsave("outputs/Figure S2.jpg", p, width = 4, height = 5, units = "in", dpi = 300)
+ggsave("outputs/Figure S2.pdf", p, width = 4, height = 5, units = "in", dpi = 300)
+
+```
+
+
+
+# quality check
+```{r}
+
+#*****************************************************************************************************************
+# Step 1: load data
+#*****************************************************************************************************************
+library(ggplot2)
+library(ggmap)
+library(maps)
+library(mapdata)
+library("readxl")
+library(dplyr)
+data_loc <- paste(here::here(), "data", sep = "/")
+outputs_loc <- paste(here::here(), "outputs", sep = "/")
+
+soilhealthData <- read.csv("data/SoilHealthDB_V2.csv", header = T,
+                           fileEncoding = "GBK",
+                           na = c("", "NA"))
+nrow(soilhealthData)
+
+#*****************************************************************************************************************
+# Step 2: data quality check 
+# check background information (contries's latitude and longitude and other numeric background informations)
+#*****************************************************************************************************************
+
+#2.1 check potential location input error
+attach(soilhealthData)
+Country <- as.character(soilhealthData$Country)
+sort(unique(Country)) # data from 43 countries, all data has contry information
+
+varCountry <- c("Argentina","Australia", "Bangladesh","Benin"
+  , "Brazil", "Cameroon",  "Canada", "China",  "Costa Rica"   
+  , "Denmark",  "UK",   "France", "Germany"  
+  ,  "Ghana",  "Greece", "Guinea", "India",  "Indonesia"
+  , "Iran", "Italy",  "Kenya",  "Malawi", "Mexico", "Netherland","New Zealand"  
+  , "Nigeria",   "Norway", "Peru",   "Philippines", "Poland"  
+  , "Republic of Moldova", "Russia", "Rwanda", "South Korea", "Spain",  "Sweden" 
+  , "Switzerland", "Tanzania",  "Thailand", "Togo", "Turkey", "Uganda"   
+  , "USA", "Zambia", "Zimbabwe")
+
+sub_country <- as.data.frame(matrix(NA, ncol = 7, nrow = length(varCountry)))
+colnames(sub_country) <- c("ID", "Country", "Lat_min", "Lat_max", "Long_min", "Long_max", "obs(n)")
+
+par( mar=c(2, 0.2, 0.2, 0.2)
+     , mai=c(0.4, 0.6, 0.0, 0.1)  # by inches, inner margin
+     , omi = c(0.1, 0.3, 0.4, 0.2)  # by inches, outer margin
+     , mgp = c(0.5, 0.5, 0) # set distance of axis
+     , tcl = 0.4
+     , cex.axis = 1.0
+     , mfrow=c(1, 2))
+
+for (i in 1:length(varCountry)) {
+  subdata <- soilhealthData[soilhealthData$Country == varCountry[i],]
+  min_lat <- min(subdata$Latitude, na.rm = T)
+  max_lat <- max(subdata$Latitude, na.rm = T)
+  min_long <- min(subdata$Longitude, na.rm = T)
+  max_long <- max(subdata$Longitude, na.rm = T)
+  n_obs <- length(subdata$StudyID) # number of observations in this country
+  
+  sub_country[i,] <- list(i,varCountry[i], min_lat, max_lat, min_long, max_long, n_obs)
+  print(paste0("***********", i))
+}
+
+
+pdf( paste(outputs_loc,'QC1. world map for each country.pdf', sep = "/" ), width=8, height=4)
+
+## plot each country
+for (i in 1:length(varCountry)){
+  
+  sub_country[i,] %>% ggplot() + 
+    geom_polygon(data = subset(map_data("world"), region != "Antarctica") , 
+                 aes(x = long, y = lat, group = group), fill = "gray", color = "black") +
+    geom_rect(data =  sub_country[i,], aes(xmin = Long_min, xmax = Long_max, ymin = Lat_min, ymax = Lat_max), 
+              fill = NA, color = "red", linetype = "solid", size = 1) +
+    theme_minimal() +
+    labs(title = varCountry[i]) -> country_plot_i
+  print(country_plot_i)
+   
+  print(paste0("**********", i))
+}
+
+dev.off()
+
+
+sub_country # view and check potential latitude and longitude input error
+
+colnames(soilhealthData)
+
+# create a function to plot histgram of numeric background information
+qc_background <- function (bk, tex_ylab) { 
+  ggplot(soilhealthData, aes(x=bk)) + 
+    geom_histogram(color="black", fill="gray") + theme_bw() +
+    xlab (tex_ylab)
+}
+
+# plot and output figures****************************************************************
+
+pdf( paste(outputs_loc,'QC2. Backgroud information histgram.pdf', sep = "/" ), width=6, height=4)
+
+#2.2 check publication year
+qc_background (YearPublication, "Paper published year")
+
+# 2.3 check elevation
+Elevation <- as.numeric(Elevation)
+qc_background (Elevation, "Elevation")
+
+# 2.4
+qc_background ( Tannual, "Annual temperature" )
+
+# 2.5
+qc_background ( MAT, "Mean annual temperature" )
+
+# 2.6
+qc_background ( Pannual, "Annual precipitation" )
+
+# 2.7
+qc_background ( MAP, "Mean annual precipitation" )
+
+# 2.8
+qc_background ( CEC, "CEC" )
+
+qc_background ( SoilBD, "Soil bulk dsity" )
+
+# 2.9
+qc_background ( SandPerc, "Sand percentage (%)" )
+
+# 2.10
+qc_background ( SiltPerc, "Silt percentage (%)" )
+
+# 2.11
+qc_background ( ClayPerc, "Clay percentage (%)" )
+
+# 2.12
+qc_background ( SoilpH, "Soil pH" )
+
+# 2.13
+qc_background( BG_SOC, "Soil background carbon (%)" )
+
+SOC_NaturalVeg <- as.numeric(SOC_NaturalVeg)
+qc_background(SOC_NaturalVeg, "Soil carbon of nature vegetation (%)" )
+
+# 2.14
+qc_background( SoilKsat, "Soil saurated conductivity" )
+
+# 2.15
+No_C <- as.numeric(No_C)
+qc_background( No_C, "Number of replication for control (n)" )
+
+# 2.16
+No_T <- as.numeric(No_T)
+qc_background( No_T, "Number of replication for treatment (n)" )
+
+# 2.17
+NoSubsample <- as.numeric(NoSubsample)
+qc_background( NoSubsample, "Number of subsamples (n)" )
+
+dev.off()
+
+
+#*****************************************************************************************************************
+# Step 3: data quality check -- check indicators
+#*****************************************************************************************************************
+
+# first response infor column
+which(colnames(soilhealthData) == 'BiomassCash_C')
+# last useful parameter
+which(colnames(soilhealthData) == 'SQI_C')
+
+# get all response indicators and store in respcol -- control
+respcol <- seq(which(colnames(soilhealthData) == 'BiomassCash_C'),which(colnames(soilhealthData) == 'Texture_C'), 6) # all response columns
+res_name <- colnames(soilhealthData)[respcol]
+
+# get all response indicators and store in respcol2 -- trentment
+respcol2 <- respcol+1
+res_name2 <- colnames(soilhealthData)[respcol2]
+
+
+# plot and output figures****************************************************************
+
+pdf( paste(outputs_loc,'QC3. Soil health indicator histgram.pdf', sep = "/" ), width=8, height=4)
+
+par( mar=c(2, 0.2, 0.2, 0.2)
+     , mai=c(0.4, 0.6, 0.0, 0.1)  # by inches, inner margin
+     , omi = c(0.1, 0.3, 0.4, 0.2)  # by inches, outer margin
+     , mgp = c(0.5, 0.5, 0) # set distance of axis
+     , tcl = 0.4
+     , cex.axis = 1.0
+     , mfrow=c(1, 2) )
+
+for (i in 1:length(respcol)) {
+  
+  # plot control
+  if (is.infinite(min(soilhealthData[,respcol[i]], na.rm = T))) {next}
+  else {
+    xlim_low <- min(soilhealthData[,respcol[i]], na.rm = T)
+    xlim_high <- max(soilhealthData[,respcol[i]], na.rm = T)
+    bk <- ( xlim_high - xlim_low ) /20
+    
+    hist(soilhealthData[,respcol[i]], breaks = seq(xlim_low, xlim_high, bk)
+         , col = "gray"
+         , main = ""
+         , xlab = ""
+         , ylab = ""
+         , xlim = c(xlim_low, xlim_high*1.1)
+         , freq=FALSE )
+    
+    mtext(side = 2, text = expression("Frequency"), line = 2.0, cex=1.0, outer = F)
+    
+    mtext(side = 3, text = res_name[i], line = 0.5, cex=1.2, outer = F)
+    
+    box()
+    
+    # plot treatment
+    xlim_low <- min(soilhealthData[,respcol2[i]], na.rm = T)
+    xlim_high <- max(soilhealthData[,respcol2[i]], na.rm = T)
+    bk <- ( xlim_high - xlim_low ) /20
+    
+    hist(soilhealthData[,respcol2[i]], breaks = seq(xlim_low, xlim_high, bk)
+         , col = "gray"
+         , main = ""
+         , xlab = ""
+         , ylab = ""
+         , xlim = c(xlim_low, xlim_high*1.1)
+         , freq=FALSE )
+    
+    mtext(side = 2, text = expression("Frequency"), line = 2.0, cex=1.0, outer = F)
+    
+    mtext(side = 3, text = res_name2[i], line = 0.5, cex=1.2, outer = F)
+    
+    box()
+    
+    print(paste0("**********", i))
+  }
+}
+
+dev.off()
+
+
+
+```
+
+
+

@@ -1,0 +1,64 @@
+StudyID,Author_F,YearPublication,Journal,Medium_start_year,Long_start_year,Title
+1,Hao,2023,Science of The Total Environment,4,11,Are there universal soil responses to cover cropping? A systematic review
+2,Herzog,2019,"Agriculture, Ecosystems & Environment",4,9,Are there universal soil responses to cover cropping? A systematic review
+3,Joshi,2023,Agronomy Journal,6,11,A global meta-analysis of cover crop response on soil carbon  storage within a corn production system
+4,Huang,2018,"Agriculture, Ecosystems & Environment",5,11,Greenhouse gas emissions and crop yield in no-tillage systems: A meta-analysis
+5,Blanco-Canqui,2020,Soil Science Society of America Journal,4,11,Cover crop impacts on soil physical properties: A review
+6,Karki,2025,"Acta Agriculturae Scandinavica, Section B ¡ª Soil & Plant Science",5,11,Greenhouse gas emissions under conservation agriculture: a synthesis of field observations on integrating conservation tillage and cover crops
+7,Dong,2025,Environmental Research Letters,4,,Integrated response of crop yields and greenhouse gas emissions to cropland management practices and natural factors: a global meta-analysis
+8,Blanco-Canqui,2023,Soil Use and Management,5,11,Do organic farming practices improve soil physical properties?
+9,Blanco-Canqui,2021,Soil Science Society of America Journal,5,11,Can cover crops improve soil ecosystem services in water-limited environments? A review
+10,Wu,2025,Nature Food,5,10,Crop rotation increases Tibetan barley yield and soil quality on the Tibetan Plateau
+11,McClelland,2020,Ecological Applications,3,10,Management of cover crops in temperate climates influences soil organic carbon stocks: a meta-analysis
+13,Huang,2025,Global Change Biology,3,6,Reduced erosion augments soil carbon storage under cover crops
+14,Blanco-Canqui,2023,Plant and Soil,5,11,Do cover crop mixtures improve soil physical health more than monocultures?
+16,Hu,2023,"Agriculture, Ecosystems & Environment",5,10,"Soil organic carbon fractions in response to soil, environmental and agronomic factors under cover cropping systems: A global meta-analysis"
+17,Nunes,2020,Geoderma,3,11,Biological soil health indicators respond to tillage intensity: A US meta-analysis
+18,Daryanto,2017,Scientific Reports,6,11,"Impacts of no-tillage management on nitrate loss from corn, soybean and wheat cultivation: A meta-analysis"
+19,Ding,2025,Soil and Tillage Research,6,13,Depth-driven responses of soil organic carbon fractions to orchard cover crops across China: A meta-analysis
+20,Corbeels,2019,Soil and Tillage Research,5,10,The 4 per 1000 goal and soil carbon storage under agroforestry and conservation agriculture systems in sub-Saharan Africa
+21,Liu,2014,Global Change Biology,4,16,Effects of straw carbon input on carbon dynamics in agricultural soils: a meta-analysis
+22,Liu,2020,Journal of cleaner production,3,,Meta-analysis of management-induced changes in nitrogen use efficiency of winter wheat in the North China Plain
+24,Li,2025,European Journal of Agronomy,2,5,Crop straw converted to biochar increases soil organic carbon but reduces available carbon
+25,Meng,2024,Science of The Total Environment,2,4,A meta-analysis of conservation tillage management effects on soil organic carbon sequestration and soil greenhouse gas flux
+26,Liu,2024,Plants,3,6,Straw Returning Methods Affects Macro-Aggregate Content and Organic Matter Content in Black Soils: Meta-Analysis and Comprehensive Validation
+27,Zhao,2024,Agriculture,5,,Enhancing Sustainable Agriculture in China: A Meta-Analysis of the Impact of Straw and Manure on Crop Yield and Soil Fertility
+28,Berhane,2020,Global Change Biology,6,11,Effects of long-term straw return on soil organic carbon storage and sequestration rate in North China upland crops: A meta-analysis
+29,Liu,2023,Journal of Environmental Management,6,11,"Agricultural management strategies for balancing yield increase, carbon sequestration, and emission reduction after straw return for three major grain crops in China: A meta-analysis"
+30,Zhang,2024,The effects of straw return on soil bacterial diversity and functional profiles: A meta-analysis,1,6,The effects of straw return on soil bacterial diversity and functional profiles: A meta-analysis
+31,Ding,2025,Field Crops Research,2,5,Balancing agricultural benefits and environmental risks: Trace element contamination from prolonged straw incorporation
+33,Lin,2023,Journal of Environmental Management,6,11,Changes in cropland soil carbon through improved management practices in China: A meta-analysis
+34,Dong,2021,Mitigation and Adaptation Strategies for Global Change,5,11,The effect of conservation tillage in managing climate change in arid and semiarid areas¡ªa case study in Northwest China
+35,Zhao,2015,Global Change Biology,6,,Methane and nitrous oxide emissions under no-till farming in China: a meta-analysis
+36,Li,2018,Soil Biology and Biochemistry,6,11,Conservation agriculture practices increase soil microbial biomass carbon and nitrogen in agricultural soils: A global meta-analysis
+37,D¡¯Hose,2018,Pedobiologia,5,11,Responses of soil biota to non-inversion tillage and organic amendments: An analysis on European multiyear field experiments
+39,Bregaglio,2022,International Soil and Water Conservation Research,,10,Which are the most favourable conditions for reducing soil CO2 emissions with no-tillage? Results from a meta-analysis
+40,Liu,2023,Applied Soil Ecology,6,11,Soil carbon sequestration in paddy field and its simultaneous mineralization to supply available nutrients for the crops are affected by no-tillage with straw management: A meta-analysis
+41,Liu,2025,Applied Soil Ecology,5,10,Long-term no-tillage enhanced soil multifunctionality and reduced microbial metabolic entropy
+42,Sun,2024,Soil and Tillage Research,5,10,Regionally adapted conservation tillage reduces the risk of crop yield losses: A global meta-analysis
+43,Pittelkow,2015,Field Crops Research,5,11,When does no-till yield more? A global meta-analysis
+44,Yu,2025,Plant and Soil,3,10,Global synthesis on the responses of microbial- and plant-derived carbon to conservation tillage
+45,Peng,2024,Field Crops Research,5,,Global synthesis of cover crop impacts on main crop yield
+47,Li,2020,Science of The Total Environment,6,13,Residue retention promotes soil carbon accumulation in minimum tillage systems: Implications for conservation agriculture
+48,Prairie,2022,Proceedings of the National Academy of Sciences,6,13,Restoring particulate and mineral-associated organic carbon through regenerative agriculture
+49,Colunga,2025,Soil and Tillage Research,6,11,Carbon sequestration through conservation tillage in sandy soils of arid and semi-arid climates: A meta-analysis
+50,Randriamalala,2015,"Agriculture, Ecosystems & Environment",3,6,Effects of slash-and-burn practices on soil seed banks in secondary forest successions in Madagascar
+51,Feng,2018,PLOS ONE,6,11,Impact of agronomy practices on the effects of reduced tillage systems on CH4 and N2O emissions from agricultural fields: A global meta-analysis
+52,Yan,2023,Chinese Geographical Science,5,11,A Meta-analysis of No-tillage Effects on Greenhouse Gas Emissions from Wheat-based Rotation Cropping Agroecosystem in China
+53,Hu,2019,Sustainability,3,6,The Responses of Soil N2O Emissions to Residue Returning Systems: A Meta-Analysis
+54,Xiao,2020,Journal of Cleaner Production,5,10,Crop cleaner production improvement potential under conservation agriculture in China: A meta-analysis
+55,Zhao,2017,European Journal of Agronomy,6,10,Crop yields under no-till farming in China: A meta-analysis
+56,Li,2023,Global Change Biology,5,11,"Response of nitrate leaching to no-tillage is dependent on soil, climate, and management factors: A global meta-analysis"
+57,Liu,2021,Land Degradation & Development,6,11,A global meta-analysis of the impacts of no-tillage on soil aggregation and aggregate-associated organic carbon
+58,Huang,2013,Field Crops Research,3,11,Effect of crop residue retention on rice yield in China: A meta-analysis
+59,Daryanto,2017,Journal of Environmental Quality,6,11,Meta-Analysis of Phosphorus Loss from No-Till Soils
+61,Zhao,2023,European Journal of Agronomy,6,11,Response of wheat and maize yields to different tillage practices across China: A meta-analysis
+62,Han,2025,"Agriculture, Ecosystems & Environment",6,11,Integrating straw return and tillage practices to enhance soil organic carbon sequestration in wheat¨Cmaize rotation systems in the North China Plain
+63,Huang,2015,Field Crops Research,3,7,No-tillage effect on rice yield in China: A meta-analysis
+64,Achankeng,2023,Field Crops Research,5,,Conservation tillage effects on European crop yields: A meta-analysis
+65,Nunes,2020,Geoderma,3,11,Biological soil health indicators respond to tillage intensity: A US meta-analysis
+66,Li,2020,Geoderma,6,13,"Trade-off between soil pH, bulk density and other soil physical properties under global no-tillage agriculture"
+67,Song,2025,Agricultural Water Management,4,,Effects of management of plastic and straw mulching management on crop yield and soil salinity in saline-alkaline soils of China: A meta-analysis
+68,Liang,2020,Soil and Tillage Research,3,11,Revisiting no-till¡¯s impact on soil organic carbon storage in Canada
+69,Feng,2020,Renewable and Sustainable Energy Reviews,6,11,Can deep tillage enhance carbon sequestration in soils? A meta-analysis towards GHG mitigation and sustainable agricultural management
+70,Zhao,2021,Global Change Biology,5,16,Responses of soil pH to no-till and the factors affecting it: A global meta-analysis
