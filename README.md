@@ -20,6 +20,8 @@ We welcome contributions to improve this database:
 If you have any questions, please contact Jinshi Jian: jinshi@nwafu.edu.cn.
 
 ## Usage and citation
+Before running the code, please make sure all required data files are prepared.  
+Since the files **“CLYPPT_M_sl1_250m_ll.tif”** and **“SLTPPT_M_sl1_250m_ll.tif”** are too large, please download them from the **Release** page and copy them into the **`data/other_data`** folder before running the code.
 Those items can be used for individual, academic, research, and commercial usage, but cannot be repackaged or sold without written permission.
 The relevant citations are:
 *	Stewart, R. D., Jian, J., Gyawali, A. J., Thomason, W. E., Badgley, B. D., Reiter, M. S., and Strickland, M. S.: What we talk about when we talk about soil health, Agric. Environ. Lett., 3(1), 180033, https://doi.org/10.2134/ael2018.06.0033, 2018.
