@@ -1,12 +1,4 @@
 # file or dir in this file will be ignored
 .Rhistory
 *.RData
-SoilHealthDB_V2.xlsx
-
-
-
-
-
-
-
-
+data/SoilHealthDB_V2.xlsx
