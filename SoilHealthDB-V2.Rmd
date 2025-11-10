@@ -1853,7 +1853,7 @@ ggsave("outputs/Figure 7.pdf", width = 12, height = 10, dpi = 300, units = "in")
 library(tidyverse)
 library(gghalves)
 
-duration <- read_csv("data/other_data/medium and long-term start year.csv")
+duration <- read_csv("data/other_data/medium and long-term duration year.csv")
 
 duration_long <- duration %>%
   pivot_longer(
@@ -1870,7 +1870,7 @@ duration_long <- duration %>%
     )
   )
 
-#Bootstrap sampling
+# Bootstrap sampling
 boots_startyear <- function(sdata, n_rep = 5000) {
   results_list <- list()
   for (cat in unique(sdata$Category)) {
@@ -1894,6 +1894,23 @@ boot_results <- boots_startyear(duration_long, n_rep = 5000)
 boot_results$Category <- factor(boot_results$Category,
                                 levels = c("Medium term", "Long term"))
 
+
+mean_points <- boot_results %>%
+  group_by(Category) %>%
+  summarise(
+    MeanValue = mean(BootMean, na.rm = TRUE),
+    CI_low = quantile(BootMean, 0.025, na.rm = TRUE),
+    CI_high = quantile(BootMean, 0.975, na.rm = TRUE)
+  ) %>%
+  mutate(
+    Label = sprintf("%.2f ± %.2f", MeanValue, (CI_high - CI_low)/2),
+    LabelY = case_when(
+      Category == "Medium term" ~ MeanValue + 0.7,
+      Category == "Long term"   ~ MeanValue + 1.1
+    )
+    )
+
+
 p <- ggplot(boot_results, aes(x = Category, y = BootMean, fill = Category)) +
   
   geom_boxplot(
@@ -1913,15 +1930,32 @@ p <- ggplot(boot_results, aes(x = Category, y = BootMean, fill = Category)) +
     color = "black"
   ) +
   
+  geom_point(
+    data = mean_points,
+    aes(x = Category, y = MeanValue),
+    color = "red",
+    shape = 17,
+    size = 2,
+    position = position_nudge(x = -0.15)
+  ) +
+  
+    geom_text(
+    data = mean_points,
+    aes(x = Category, y = LabelY, label = Label),
+    color = "red",
+    size = 3.5,
+    position = position_nudge(x = -0.15)
+  ) +
+  
   scale_y_continuous(
-    limits = c(3, 13),
-    breaks = seq(3, 13, 1)
+    limits = c(3, 12),
+    breaks = seq(3, 12, 1)
   ) +
   
   scale_fill_manual(values = c("Medium term" = "#0173B2", "Long term" = "black")) +
   labs(
     x = NULL,
-    y = "Start years (n)"
+    y = "Duration year (n)"
   ) +
   theme_minimal(base_size = 13) +
   theme(
@@ -1934,7 +1968,6 @@ p <- ggplot(boot_results, aes(x = Category, y = BootMean, fill = Category)) +
   )
 
 print(p)
-
 
 ggsave("outputs/Figure S2.jpg", p, width = 4, height = 5, units = "in", dpi = 300)
 ggsave("outputs/Figure S2.pdf", p, width = 4, height = 5, units = "in", dpi = 300)
